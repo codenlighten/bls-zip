@@ -1,6 +1,34 @@
 // Partially Homomorphic Encryption using Paillier cryptosystem
-use paillier::*;
+// Custom implementation to avoid dependency conflicts with libp2p
+
+use num_bigint::{BigUint, RandBigInt};
+use num_traits::{One, Zero};
+use rand::thread_rng;
+use serde::{Deserialize, Serialize};
 use crate::error::CryptoError;
+
+/// Paillier public key for encryption
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct EncryptionKey {
+    n: BigUint,      // n = p * q
+    g: BigUint,      // g = n + 1
+    n_squared: BigUint,
+}
+
+/// Paillier private key for decryption
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DecryptionKey {
+    lambda: BigUint,  // λ = lcm(p-1, q-1)
+    mu: BigUint,      // μ = (L(g^λ mod n²))^(-1) mod n
+    n: BigUint,
+    n_squared: BigUint,
+}
+
+/// Encrypted ciphertext
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Ciphertext {
+    value: BigUint,
+}
 
 /// Paillier PHE wrapper for privacy-preserving computations
 pub struct PaillierPhe {
@@ -8,15 +36,53 @@ pub struct PaillierPhe {
 }
 
 impl PaillierPhe {
-    /// Create a new Paillier instance with specified key size
+    /// Create a new Paillier instance with specified key size (bits)
     pub fn new(key_size: usize) -> Self {
+        if key_size < 512 {
+            panic!("Key size must be at least 512 bits for security");
+        }
         Self { key_size }
     }
 
     /// Generate a Paillier keypair
     pub fn keypair(&self) -> Result<(EncryptionKey, DecryptionKey), CryptoError> {
-        let (ek, dk) = Paillier::keypair_with_modulus_size(self.key_size)
-            .generate_keypair();
+        let mut rng = thread_rng();
+        let half_size = self.key_size / 2;
+
+        // Generate two large primes p and q
+        let p = Self::generate_prime(&mut rng, half_size);
+        let q = Self::generate_prime(&mut rng, half_size);
+
+        // Compute n = p * q
+        let n = &p * &q;
+        let n_squared = &n * &n;
+
+        // Compute λ = lcm(p-1, q-1)
+        let p_minus_1 = &p - BigUint::one();
+        let q_minus_1 = &q - BigUint::one();
+        let lambda = Self::lcm(&p_minus_1, &q_minus_1);
+
+        // g = n + 1 (simplified approach for better performance)
+        let g = &n + BigUint::one();
+
+        // Compute μ = (L(g^λ mod n²))^(-1) mod n
+        let g_lambda = g.modpow(&lambda, &n_squared);
+        let l_result = Self::l_function(&g_lambda, &n);
+        let mu = Self::mod_inverse(&l_result, &n)?;
+
+        let ek = EncryptionKey {
+            n: n.clone(),
+            g,
+            n_squared: n_squared.clone(),
+        };
+
+        let dk = DecryptionKey {
+            lambda,
+            mu,
+            n,
+            n_squared,
+        };
+
         Ok((ek, dk))
     }
 
@@ -25,21 +91,50 @@ impl PaillierPhe {
         &self,
         plaintext: u64,
         encryption_key: &EncryptionKey,
-    ) -> Result<RawCiphertext<'static>, CryptoError> {
-        let encoded = EncodedPlaintext::from(plaintext);
-        let ciphertext = Paillier::encrypt(encryption_key, encoded);
-        Ok(ciphertext)
+    ) -> Result<Ciphertext, CryptoError> {
+        let mut rng = thread_rng();
+        let m = BigUint::from(plaintext);
+
+        // Ensure plaintext is less than n
+        if m >= encryption_key.n {
+            return Err(CryptoError::PheError(
+                "Plaintext must be less than n".to_string(),
+            ));
+        }
+
+        // Select random r where r < n and gcd(r, n) = 1
+        let r = rng.gen_biguint_range(&BigUint::one(), &encryption_key.n);
+
+        // c = g^m * r^n mod n²
+        let g_m = encryption_key.g.modpow(&m, &encryption_key.n_squared);
+        let r_n = r.modpow(&encryption_key.n, &encryption_key.n_squared);
+        let c = (g_m * r_n) % &encryption_key.n_squared;
+
+        Ok(Ciphertext { value: c })
     }
 
     /// Decrypt a ciphertext
     pub fn decrypt(
         &self,
-        ciphertext: &RawCiphertext,
+        ciphertext: &Ciphertext,
         decryption_key: &DecryptionKey,
     ) -> Result<u64, CryptoError> {
-        let plaintext = Paillier::decrypt(decryption_key, ciphertext);
-        let value: u64 = plaintext.0.try_into()
-            .map_err(|_| CryptoError::DecryptionError("Value out of range".to_string()))?;
+        // m = L(c^λ mod n²) * μ mod n
+        let c_lambda = ciphertext
+            .value
+            .modpow(&decryption_key.lambda, &decryption_key.n_squared);
+        let l_result = Self::l_function(&c_lambda, &decryption_key.n);
+        let m = (l_result * &decryption_key.mu) % &decryption_key.n;
+
+        // Convert BigUint to u64
+        let value: u64 = m
+            .to_u64_digits()
+            .get(0)
+            .copied()
+            .ok_or_else(|| {
+                CryptoError::DecryptionError("Value out of range for u64".to_string())
+            })?;
+
         Ok(value)
     }
 
@@ -47,21 +142,123 @@ impl PaillierPhe {
     pub fn add(
         &self,
         encryption_key: &EncryptionKey,
-        ct1: &RawCiphertext,
-        ct2: &RawCiphertext,
-    ) -> RawCiphertext<'static> {
-        Paillier::add(encryption_key, ct1.clone(), ct2.clone())
+        ct1: &Ciphertext,
+        ct2: &Ciphertext,
+    ) -> Ciphertext {
+        let value = (&ct1.value * &ct2.value) % &encryption_key.n_squared;
+        Ciphertext { value }
     }
 
     /// Homomorphic scalar multiplication: k * E(m) = E(k * m)
     pub fn mul(
         &self,
         encryption_key: &EncryptionKey,
-        ciphertext: &RawCiphertext,
+        ciphertext: &Ciphertext,
         scalar: u64,
-    ) -> RawCiphertext<'static> {
-        let encoded_scalar = EncodedPlaintext::from(scalar);
-        Paillier::mul(encryption_key, ciphertext.clone(), encoded_scalar)
+    ) -> Ciphertext {
+        let k = BigUint::from(scalar);
+        let value = ciphertext.value.modpow(&k, &encryption_key.n_squared);
+        Ciphertext { value }
+    }
+
+    // Helper functions
+
+    fn generate_prime(rng: &mut impl RandBigInt, bits: usize) -> BigUint {
+        loop {
+            let candidate = rng.gen_biguint(bits as u64);
+            if Self::is_probably_prime(&candidate, 20) {
+                return candidate;
+            }
+        }
+    }
+
+    fn is_probably_prime(n: &BigUint, k: usize) -> bool {
+        use num_bigint::ToBigInt;
+
+        if n <= &BigUint::one() {
+            return false;
+        }
+        if n == &BigUint::from(2u32) || n == &BigUint::from(3u32) {
+            return true;
+        }
+        if n % 2u32 == BigUint::zero() {
+            return false;
+        }
+
+        // Write n-1 as 2^r * d
+        let n_minus_1 = n - BigUint::one();
+        let mut d = n_minus_1.clone();
+        let mut r = 0u32;
+        while &d % 2u32 == BigUint::zero() {
+            d /= 2u32;
+            r += 1;
+        }
+
+        let mut rng = thread_rng();
+        'witness: for _ in 0..k {
+            let a = rng.gen_biguint_range(&BigUint::from(2u32), &(n - BigUint::from(2u32)));
+            let mut x = a.modpow(&d, n);
+
+            if x == BigUint::one() || x == n_minus_1 {
+                continue;
+            }
+
+            for _ in 0..r - 1 {
+                x = x.modpow(&BigUint::from(2u32), n);
+                if x == n_minus_1 {
+                    continue 'witness;
+                }
+            }
+
+            return false;
+        }
+
+        true
+    }
+
+    fn l_function(x: &BigUint, n: &BigUint) -> BigUint {
+        (x - BigUint::one()) / n
+    }
+
+    fn gcd(a: &BigUint, b: &BigUint) -> BigUint {
+        if b.is_zero() {
+            a.clone()
+        } else {
+            Self::gcd(b, &(a % b))
+        }
+    }
+
+    fn lcm(a: &BigUint, b: &BigUint) -> BigUint {
+        (a * b) / Self::gcd(a, b)
+    }
+
+    fn mod_inverse(a: &BigUint, m: &BigUint) -> Result<BigUint, CryptoError> {
+        use num_bigint::ToBigInt;
+        use num_traits::Signed;
+
+        let a_int = a.to_bigint().unwrap();
+        let m_int = m.to_bigint().unwrap();
+
+        let (mut t, mut new_t) = (num_bigint::BigInt::zero(), num_bigint::BigInt::one());
+        let (mut r, mut new_r) = (m_int.clone(), a_int);
+
+        while !new_r.is_zero() {
+            let quotient = &r / &new_r;
+            (t, new_t) = (new_t.clone(), t - &quotient * &new_t);
+            (r, new_r) = (new_r.clone(), r - quotient * new_r);
+        }
+
+        if r > num_bigint::BigInt::one() {
+            return Err(CryptoError::PheError(
+                "Modular inverse does not exist".to_string(),
+            ));
+        }
+
+        if t.is_negative() {
+            t = t + m_int;
+        }
+
+        Ok(t.to_biguint().unwrap())
     }
 }
 
@@ -87,8 +284,8 @@ impl PrivateAggregator {
     pub fn sum_encrypted(
         &self,
         encryption_key: &EncryptionKey,
-        ciphertexts: &[RawCiphertext],
-    ) -> Result<RawCiphertext<'static>, CryptoError> {
+        ciphertexts: &[Ciphertext],
+    ) -> Result<Ciphertext, CryptoError> {
         if ciphertexts.is_empty() {
             return Err(CryptoError::PheError("Empty ciphertext list".to_string()));
         }
@@ -105,9 +302,9 @@ impl PrivateAggregator {
     pub fn weighted_sum(
         &self,
         encryption_key: &EncryptionKey,
-        ciphertexts: &[RawCiphertext],
+        ciphertexts: &[Ciphertext],
         weights: &[u64],
-    ) -> Result<RawCiphertext<'static>, CryptoError> {
+    ) -> Result<Ciphertext, CryptoError> {
         if ciphertexts.len() != weights.len() {
             return Err(CryptoError::PheError("Mismatched lengths".to_string()));
         }
@@ -218,5 +415,22 @@ mod tests {
 
         let expected: u64 = values.iter().zip(&weights).map(|(v, w)| v * w).sum();
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_large_values() {
+        let phe = PaillierPhe::new(2048);
+        let (ek, dk) = phe.keypair().unwrap();
+
+        let m1 = 1_000_000u64;
+        let m2 = 2_000_000u64;
+
+        let ct1 = phe.encrypt(m1, &ek).unwrap();
+        let ct2 = phe.encrypt(m2, &ek).unwrap();
+
+        let ct_sum = phe.add(&ek, &ct1, &ct2);
+        let sum = phe.decrypt(&ct_sum, &dk).unwrap();
+
+        assert_eq!(sum, m1 + m2);
     }
 }

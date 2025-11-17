@@ -10,7 +10,7 @@
 pub mod error;
 pub mod hybrid;
 pub mod pqc;
-// pub mod phe;  // Disabled due to paillier dependency conflict with libp2p
+pub mod phe;  // Re-enabled with custom implementation (no dependency conflicts)
 
 pub use error::CryptoError;
 pub use hybrid::{
@@ -18,7 +18,7 @@ pub use hybrid::{
     HybridSignatureData, HybridSignatureKeyPair, HybridSignaturePublicKey,
 };
 pub use pqc::{Falcon512, MlDsa44, MlKem768};
-// pub use phe::{PaillierPhe, PrivateAggregator};
+pub use phe::{Ciphertext, DecryptionKey, EncryptionKey, PaillierPhe, PrivateAggregator};
 
 #[cfg(test)]
 mod tests {

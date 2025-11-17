@@ -38,6 +38,6 @@ sha3.workspace = true
 # Security: CORS, rate limiting, and authentication
 tower-http = { version = "0.5", features = ["cors", "limit"] }
 tower = "0.4"
-tower-governor = "0.4"
+tower_governor = "0.4"
 http = "1.0"
 futures = "0.3"
