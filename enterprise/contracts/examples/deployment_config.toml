@@ -1,0 +1,163 @@
+# Example Deployment Configuration for Enterprise E2 Multipass Smart Contracts
+#
+# This file demonstrates how to configure contract deployments for the
+# Boundless BLS Enterprise E2 Multipass platform.
+
+# ============================================================================
+# Identity Access Control Contract
+# ============================================================================
+[identity_access_control]
+wasm_path = "target/ink/identity_access_control.wasm"
+constructor = "new"
+constructor_args = []
+deployer_account = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+deployer_identity = "c9ad4c39-c9f3-463d-ad66-c78649905b87"
+gas_limit = 50_000_000
+rpc_url = "http://localhost:9933"
+description = "Role-based access control with E2 identity verification"
+
+# ============================================================================
+# Multi-Signature Wallet Contract
+# ============================================================================
+[multisig_wallet]
+wasm_path = "target/ink/multisig_wallet.wasm"
+constructor = "new"
+# Constructor args: initial_signers (Vec<(AccountId, [u8; 32], Balance)>), threshold (u32)
+# Example: 2-of-3 multisig with $10,000 daily limit per signer
+constructor_args = [
+    # Signer 1: Alice
+    { account = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", identity = "c9ad4c39-c9f3-463d-ad66-c78649905b87", daily_limit = 10000000000 },
+    # Signer 2: Bob
+    { account = "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty", identity = "d8be5d4a-d0e4-574e-be77-d89750a16c98", daily_limit = 10000000000 },
+    # Signer 3: Charlie
+    { account = "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y", identity = "e9cf6e5b-e1f5-685f-cf88-e9a861b27da9", daily_limit = 10000000000 },
+]
+threshold = 2
+deployer_account = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+deployer_identity = "c9ad4c39-c9f3-463d-ad66-c78649905b87"
+gas_limit = 75_000_000
+rpc_url = "http://localhost:9933"
+description = "2-of-3 multi-signature wallet for corporate treasury"
+
+# ============================================================================
+# Asset Escrow Contract
+# ============================================================================
+[asset_escrow]
+wasm_path = "target/ink/asset_escrow.wasm"
+constructor = "new"
+# Constructor args: escrow_fee_bps (u32)
+# Example: 1% escrow fee (100 basis points)
+constructor_args = { escrow_fee_bps = 100 }
+deployer_account = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+deployer_identity = "c9ad4c39-c9f3-463d-ad66-c78649905b87"
+gas_limit = 100_000_000
+rpc_url = "http://localhost:9933"
+description = "P2P asset trading with escrow and dispute resolution"
+
+# ============================================================================
+# Application Authorization Contract
+# ============================================================================
+[app_authorization]
+wasm_path = "target/ink/app_authorization.wasm"
+constructor = "new"
+constructor_args = []
+deployer_account = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+deployer_identity = "c9ad4c39-c9f3-463d-ad66-c78649905b87"
+gas_limit = 50_000_000
+rpc_url = "http://localhost:9933"
+description = "OAuth-like authorization for third-party applications"
+
+# ============================================================================
+# Network Configuration
+# ============================================================================
+[network]
+# Boundless BLS Node 1 (Bootstrap/Mining Node)
+node1_rpc = "http://localhost:9933"
+node1_p2p = "30333"
+
+# Boundless BLS Node 2
+node2_rpc = "http://localhost:9934"
+node2_p2p = "30334"
+
+# Boundless BLS Node 3
+node3_rpc = "http://localhost:9935"
+node3_p2p = "30335"
+
+# Enterprise E2 Multipass API
+e2_api_url = "http://localhost:8080"
+e2_frontend_url = "http://localhost:3001"
+
+# Default network (for deployments)
+default_rpc = "http://localhost:9933"
+
+# ============================================================================
+# Deployment Settings
+# ============================================================================
+[deployment]
+# Maximum gas price (in smallest unit)
+max_gas_price = 1000
+
+# Deployment timeout (milliseconds)
+timeout_ms = 300_000
+
+# Number of block confirmations to wait
+confirmations = 3
+
+# Retry attempts if deployment fails
+max_retries = 3
+
+# Save deployment results
+save_results = true
+results_directory = "deployments/"
+
+# ============================================================================
+# E2 Multipass Integration
+# ============================================================================
+[e2_integration]
+# Auto-register contracts as applications
+auto_register_apps = true
+
+# Default scopes for contract applications
+default_scopes = ["read", "write", "execute"]
+
+# Application redirect URI (for OAuth-like flow)
+redirect_uri = "http://localhost:3001/auth/callback"
+
+# ============================================================================
+# Testing Configuration
+# ============================================================================
+[testing]
+# Use test accounts
+use_test_accounts = true
+
+# Test network
+test_rpc = "http://localhost:9933"
+
+# Test identities (from E2 Multipass)
+test_identity_alice = "c9ad4c39-c9f3-463d-ad66-c78649905b87"
+test_identity_bob = "d8be5d4a-d0e4-574e-be77-d89750a16c98"
+test_identity_charlie = "e9cf6e5b-e1f5-685f-cf88-e9a861b27da9"
+
+# Test accounts (Substrate format)
+test_account_alice = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+test_account_bob = "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+test_account_charlie = "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y"
+
+# ============================================================================
+# Production Configuration
+# ============================================================================
+[production]
+# Production RPC endpoint
+rpc_url = "https://mainnet-rpc.boundless.trust"
+
+# Higher gas limits for production
+default_gas_limit = 100_000_000
+
+# Stricter confirmation requirements
+confirmations = 6
+
+# Production E2 API
+e2_api_url = "https://api.boundless.trust"
+
+# Production frontend
+e2_frontend_url = "https://app.boundless.trust"
