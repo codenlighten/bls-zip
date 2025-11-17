@@ -1,14 +1,20 @@
 # Boundless BLS Platform
 
-> A post-quantum secure blockchain platform with privacy-preserving smart contracts
+> A post-quantum secure blockchain platform with Enterprise E² Multipass operating system
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)
 ![PQC](https://img.shields.io/badge/PQC-NIST%20Standards-green.svg)
+![Enterprise](https://img.shields.io/badge/Enterprise-E²%20Multipass-purple.svg)
 
 ## Overview
 
-Boundless BLS is a next-generation blockchain platform designed for the post-quantum era. It combines NIST-standardized post-quantum cryptographic algorithms with privacy-preserving smart contracts to deliver quantum-resistant security and confidential computation.
+**Boundless BLS** is a next-generation blockchain platform designed for the post-quantum era. It combines NIST-standardized post-quantum cryptographic algorithms with privacy-preserving smart contracts to deliver quantum-resistant security and confidential computation.
+
+The platform consists of two major components:
+
+1. **Boundless BLS Blockchain**: Core blockchain with post-quantum cryptography, SHA-3 PoW consensus, and WASM smart contracts
+2. **Enterprise E² Multipass**: Enterprise operating system providing identity management, multi-asset wallets, and business application integration
 
 ### Key Features
 
@@ -34,15 +40,24 @@ Boundless BLS is a next-generation blockchain platform designed for the post-qua
 - **Peer Status Tracking**: Nodes discover chain height differences and auto-sync
 - **Multi-Node Operation**: True distributed blockchain across multiple nodes
 
-#### Enterprise Multipass (E2 Integration) ✅ NEW
-- **Identity Management**: KYC/AML verified identity profiles with 7 attestation types
+#### Enterprise E² Multipass (Complete Integration) ✅ PRODUCTION READY
+**Not a Cryptocurrency Platform** - Enterprise blockchain for regulated business assets
+
+- **CIVA 3-Layer Identity Model**: Identity Proof, Risk & Compliance, Attributes
+- **KYC/AML Verification**: Multi-level verification with blockchain proof anchoring
+- **Application-Aware Wallets**: Contextual wallets tied to business applications (not just addresses)
+- **Multi-Asset Support**: 8+ asset types (Equity, Utility, Governance, Carbon Credits, Rewards, Stablecoins)
+- **Post-Quantum Security**: ML-DSA (Dilithium5) and ML-KEM (Kyber1024) cryptography
+- **Encrypted Keystore**: AES-256-GCM encrypted private key storage with master key management
 - **Blockchain Anchoring**: Attestations and asset transfers anchored on-chain for immutability
-- **Secure Authentication**: JWT-based auth with Argon2 password hashing and middleware protection
-- **Asset Management**: Multi-currency wallets with internal marketplace
-- **Proof Verification**: RPC endpoints to verify and retrieve blockchain-anchored proofs
-- **Hardware Security**: Hardware wallet and biometric authentication support
-- **Application Registry**: OAuth2-style app registration with scope-based permissions
-- **Event System**: Real-time notifications and compliance reporting
+- **Proof Verification**: RPC and HTTP REST endpoints to verify blockchain-anchored proofs
+- **Secure Authentication**: JWT-based auth with Argon2id password hashing and middleware
+- **Hardware Pass Integration**: NFC cards, secure elements, device attestation
+- **Application Registry**: Pluggable business modules with permission management
+- **Event System**: Real-time notifications, custom reports, analytics
+- **Smart Contract Templates**: Pre-built templates for common business logic
+- **PostgreSQL Backend**: 20+ tables with comprehensive schema (identities, wallets, assets, events)
+- **Next.js Frontend**: Modern admin UI with TypeScript and TailwindCSS
 
 #### Future Features
 - **Multi-Chain Anchoring**: BSV, Ethereum, Cardano, Solana, Hedera
@@ -63,8 +78,8 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed installation instructions.
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/boundless-bls-platform.git
-cd boundless-bls-platform
+git clone https://github.com/Saifullah62/BLS.git
+cd BLS
 
 # Build blockchain
 cargo build --release
@@ -91,12 +106,45 @@ curl -X POST http://localhost:9933 \
 # - Broadcast new blocks and transactions
 # - Maintain consensus
 
-# In another terminal: Run frontend (coming soon)
+# In another terminal: Run frontend (basic demo - WIP)
 cd frontend
 npm install
 npm run dev
 # Open http://localhost:3000
 ```
+
+### Enterprise E² Multipass Setup
+
+For the complete enterprise platform with identity management and multi-asset wallets:
+
+```bash
+# 1. Setup PostgreSQL database
+createdb enterprise_db
+
+# 2. Configure environment
+cd enterprise
+cp .env.example .env
+# Edit .env with your settings (DATABASE_URL, JWT_SECRET, etc.)
+
+# 3. Run database migrations
+sqlx migrate run
+
+# 4. Start Enterprise backend
+cargo run --bin enterprise-server
+# Server runs on http://localhost:8080
+
+# 5. In another terminal: Start Enterprise frontend
+cd enterprise/frontend
+npm install
+npm run dev
+# Open http://localhost:3001
+
+# 6. Login with default admin
+# Email: yourfriends@smartledger.solutions
+# Password: BoundlessTrust
+```
+
+**See [enterprise/README.md](enterprise/README.md) for complete Enterprise E² Multipass documentation**
 
 ### Docker Deployment (Easiest!)
 
@@ -194,11 +242,46 @@ boundless-bls-platform/
 │   ├── protocol.rs # Boundless protocol messages
 │   └── peer.rs     # Peer management
 │
-├── enterprise/       # ✅ Enterprise Multipass (E2 Integration)
-│   ├── api/         # REST API with JWT auth middleware
-│   ├── services/    # Business logic (identity, wallet, assets, auth)
-│   ├── migrations/  # PostgreSQL database migrations
-│   └── frontend/    # Next.js admin UI
+├── enterprise/       # ✅ Enterprise E² Multipass (Complete Integration)
+│   ├── src/
+│   │   ├── bin/server.rs    # Main server entry point
+│   │   ├── models.rs        # Database models (20+ tables)
+│   │   ├── api/             # REST API with JWT auth middleware
+│   │   │   ├── identity.rs  # Identity & attestation endpoints
+│   │   │   ├── wallet.rs    # Wallet management endpoints
+│   │   │   ├── auth.rs      # Authentication & session endpoints
+│   │   │   ├── asset.rs     # Asset & trading endpoints
+│   │   │   ├── application.rs # Application registry endpoints
+│   │   │   ├── events.rs    # Events & reporting endpoints
+│   │   │   └── hardware.rs  # Hardware pass endpoints
+│   │   ├── services/        # Business logic layer
+│   │   │   ├── identity.rs  # KYC/AML, attestation anchoring
+│   │   │   ├── wallet.rs    # Multi-asset wallet, key management
+│   │   │   ├── auth.rs      # JWT auth, session management
+│   │   │   ├── asset.rs     # Asset definitions, trading, anchoring
+│   │   │   ├── application.rs # App registration, permissions
+│   │   │   ├── events.rs    # Notifications, reports, analytics
+│   │   │   └── hardware.rs  # NFC cards, device challenges
+│   │   ├── blockchain/mod.rs # Boundless HTTP REST client
+│   │   ├── crypto/mod.rs     # PQC (Dilithium5, Kyber1024)
+│   │   ├── keystore/mod.rs   # AES-256-GCM encrypted key storage
+│   │   ├── transaction/      # UTXO transaction builder & PQC signer
+│   │   ├── middleware.rs     # JWT verification, rate limiting
+│   │   └── validation.rs     # Input validation
+│   ├── migrations/  # PostgreSQL database migrations (20+ tables)
+│   └── frontend/    # Next.js 14 admin UI (TypeScript + TailwindCSS)
+│       ├── src/
+│       │   ├── app/         # Next.js app router pages
+│       │   │   ├── dashboard/    # Dashboard page
+│       │   │   ├── identity/     # Identity management
+│       │   │   ├── wallet/       # Wallet UI
+│       │   │   ├── contracts/    # Smart contracts
+│       │   │   ├── trading/      # Asset trading
+│       │   │   ├── admin/        # Admin panel
+│       │   │   └── ...          # 12 total pages
+│       │   ├── lib/api.ts   # API client
+│       │   └── types/       # TypeScript definitions
+│       └── package.json
 │
 ├── contracts/        # ✅ Sample smart contracts (ink!)
 │   ├── token/       # Fungible token (ERC-20 style)
@@ -410,14 +493,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Parity Technologies**: ink! smart contract framework
 - **Bytecode Alliance**: Wasmtime runtime
 
+## Repository
+
+- **GitHub**: https://github.com/Saifullah62/BLS
+- **Issues**: https://github.com/Saifullah62/BLS/issues
+- **Releases**: https://github.com/Saifullah62/BLS/releases
+
 ## Contact
 
-- **Website**: https://boundless-bls.com
-- **Documentation**: https://docs.boundless-bls.com
-- **Discord**: https://discord.gg/boundless-bls
-- **Twitter**: [@BoundlessBLS](https://twitter.com/BoundlessBLS)
+- **Enterprise Solutions**: yourfriends@smartledger.solutions
+- **Security**: security@boundless-bls.com
 - **Email**: info@boundless-bls.com
 
 ---
 
 **Built for the post-quantum era** 🔐🚀
+
+*A collaboration between blockchain innovation and enterprise security*

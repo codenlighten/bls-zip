@@ -16,9 +16,9 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-authors = ["Boundless BLS Team"]
+authors = ["Boundless BLS Team", "Smart Ledger Solutions"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/boundless-bls/platform"
+repository = "https://github.com/Saifullah62/BLS"
 
 [workspace.dependencies]
 # Async runtime
