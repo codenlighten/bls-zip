@@ -351,7 +351,7 @@ impl NetworkNode {
     async fn handle_command(&mut self, command: NetworkCommand) {
         match command {
             NetworkCommand::BroadcastBlock(block) => {
-                // FIXME: Removed subscriber check - gossipsub will handle message routing
+                // NOTE: Gossipsub handles message routing and delivery to subscribers
 
                 let message = Message::NewBlock {
                     block: (*block).clone(),

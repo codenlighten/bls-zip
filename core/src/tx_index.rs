@@ -141,8 +141,7 @@ impl TransactionIndex {
 
         // Add input addresses (senders)
         for input in &tx.inputs {
-            // Extract address from public key hash
-            // For now, we'll use a simplified approach - hash the public key
+            // Extract address from public key using SHA3-256 hash
             use sha3::{Digest, Sha3_256};
             let mut hasher = Sha3_256::new();
             hasher.update(&input.public_key);
