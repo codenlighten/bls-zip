@@ -1,0 +1,85 @@
+{
+  "name": "AssetEscrow",
+  "version": "1.0.0",
+  "functions": [
+    {
+      "name": "createTrade",
+      "inputs": [
+        {"name": "seller", "type": "address"},
+        {"name": "buyer", "type": "address"},
+        {"name": "assetId", "type": "string"},
+        {"name": "price", "type": "uint64"}
+      ],
+      "outputs": [
+        {"name": "tradeId", "type": "uint64"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "depositFunds",
+      "inputs": [
+        {"name": "tradeId", "type": "uint64"},
+        {"name": "amount", "type": "uint64"}
+      ],
+      "outputs": [
+        {"name": "success", "type": "bool"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "confirmTrade",
+      "inputs": [
+        {"name": "tradeId", "type": "uint64"}
+      ],
+      "outputs": [
+        {"name": "success", "type": "bool"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "cancelTrade",
+      "inputs": [
+        {"name": "tradeId", "type": "uint64"}
+      ],
+      "outputs": [
+        {"name": "success", "type": "bool"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "initiateDispute",
+      "inputs": [
+        {"name": "tradeId", "type": "uint64"},
+        {"name": "reason", "type": "string"}
+      ],
+      "outputs": [
+        {"name": "disputeId", "type": "uint64"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "resolveDispute",
+      "inputs": [
+        {"name": "disputeId", "type": "uint64"},
+        {"name": "favorSeller", "type": "bool"}
+      ],
+      "outputs": [
+        {"name": "success", "type": "bool"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "getTradeStatus",
+      "inputs": [
+        {"name": "tradeId", "type": "uint64"}
+      ],
+      "outputs": [
+        {"name": "status", "type": "string"},
+        {"name": "seller", "type": "address"},
+        {"name": "buyer", "type": "address"},
+        {"name": "price", "type": "uint64"}
+      ],
+      "stateMutability": "view"
+    }
+  ]
+}

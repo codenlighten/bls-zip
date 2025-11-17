@@ -1,0 +1,72 @@
+{
+  "name": "AppAuthorization",
+  "version": "1.0.0",
+  "functions": [
+    {
+      "name": "grantAuthorization",
+      "inputs": [
+        {"name": "userId", "type": "address"},
+        {"name": "appId", "type": "string"},
+        {"name": "scopes", "type": "string"}
+      ],
+      "outputs": [
+        {"name": "authId", "type": "uint64"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "revokeAuthorization",
+      "inputs": [
+        {"name": "authId", "type": "uint64"}
+      ],
+      "outputs": [
+        {"name": "success", "type": "bool"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "checkAuthorization",
+      "inputs": [
+        {"name": "userId", "type": "address"},
+        {"name": "appId", "type": "string"},
+        {"name": "requiredScope", "type": "string"}
+      ],
+      "outputs": [
+        {"name": "authorized", "type": "bool"}
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "name": "getAuthorizationScopes",
+      "inputs": [
+        {"name": "authId", "type": "uint64"}
+      ],
+      "outputs": [
+        {"name": "scopes", "type": "string"},
+        {"name": "isActive", "type": "bool"}
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "name": "updateScopes",
+      "inputs": [
+        {"name": "authId", "type": "uint64"},
+        {"name": "newScopes", "type": "string"}
+      ],
+      "outputs": [
+        {"name": "success", "type": "bool"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "listAuthorizations",
+      "inputs": [
+        {"name": "userId", "type": "address"}
+      ],
+      "outputs": [
+        {"name": "authIds", "type": "uint64[]"}
+      ],
+      "stateMutability": "view"
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "name": "MultisigWallet",
+  "version": "1.0.0",
+  "functions": [
+    {
+      "name": "proposeTransaction",
+      "inputs": [
+        {"name": "to", "type": "address"},
+        {"name": "amount", "type": "uint64"},
+        {"name": "data", "type": "bytes"}
+      ],
+      "outputs": [
+        {"name": "proposalId", "type": "uint64"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "approveTransaction",
+      "inputs": [
+        {"name": "proposalId", "type": "uint64"}
+      ],
+      "outputs": [
+        {"name": "success", "type": "bool"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "executeTransaction",
+      "inputs": [
+        {"name": "proposalId", "type": "uint64"}
+      ],
+      "outputs": [
+        {"name": "success", "type": "bool"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "revokeApproval",
+      "inputs": [
+        {"name": "proposalId", "type": "uint64"}
+      ],
+      "outputs": [
+        {"name": "success", "type": "bool"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "getProposal",
+      "inputs": [
+        {"name": "proposalId", "type": "uint64"}
+      ],
+      "outputs": [
+        {"name": "to", "type": "address"},
+        {"name": "amount", "type": "uint64"},
+        {"name": "approvals", "type": "uint32"},
+        {"name": "executed", "type": "bool"}
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "name": "getBalance",
+      "inputs": [],
+      "outputs": [
+        {"name": "balance", "type": "uint64"}
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "name": "addSigner",
+      "inputs": [
+        {"name": "signer", "type": "address"}
+      ],
+      "outputs": [
+        {"name": "success", "type": "bool"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "removeSigner",
+      "inputs": [
+        {"name": "signer", "type": "address"}
+      ],
+      "outputs": [
+        {"name": "success", "type": "bool"}
+      ],
+      "stateMutability": "nonpayable"
+    }
+  ]
+}

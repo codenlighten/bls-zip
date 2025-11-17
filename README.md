@@ -215,7 +215,7 @@ cd frontend
 npm test
 ```
 
-See [TESTING.md](TESTING.md) and [MULTI_NODE_TESTING.md](MULTI_NODE_TESTING.md) for comprehensive testing guides.
+See the [Documentation Index](DOCUMENTATION_INDEX.md) for comprehensive testing guides and all documentation.
 
 ## Architecture
 
@@ -474,35 +474,26 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ## Documentation
 
+📚 **[Documentation Index](DOCUMENTATION_INDEX.md)** - Complete documentation catalog organized by category
+
 ### Getting Started
 - [Quick Start Guide](QUICKSTART.md) - Get started in 5 minutes
 - [README](README.md) - This file
+- [Project Status](STATUS.md) - Current status and progress
 
-### Implementation Guides
-- [Phase 2 Completion Report](PHASE2_COMPLETE.md) - RPC, Storage, P2P implementation details
-- [Phase 2 Summary](PHASE2_SUMMARY.md) - Comprehensive Phase 2 achievements
-- [Phase 3 Network Sync](PHASE3_NETWORK_SYNC.md) - Block sync & broadcasting implementation
-- [Implementation Status](IMPLEMENTATION_STATUS.md) - Complete feature status and API documentation
-
-### Security & Cryptography
-- [Post-Quantum Assurance](POST_QUANTUM_ASSURANCE.md) - **Comprehensive PQC security model and guarantees** 🔐
+### Current Documentation
 - [Technical Architecture](TECHNICAL-ARCHITECTURE.md) - Detailed architecture and cryptography layer
-
-### Testing & Performance
-- [Testing Guide](TESTING.md) - Comprehensive testing procedures
-- [Multi-Node Testing](MULTI_NODE_TESTING.md) - Multi-node test scenarios and verification
-- [Performance Optimization](PERFORMANCE_OPTIMIZATION.md) - Optimization analysis and recommendations
-
-### Project Status
-- [Project Status](PROJECT_STATUS.md) - Complete project status and metrics
-- [Final Summary](FINAL_SUMMARY.md) - Comprehensive project summary
-- [Development Plan](BOUNDLESS_COMPREHENSIVE_DEVELOPMENT_PLAN.md) - Long-term roadmap
-
-### Deployment
+- [Post-Quantum Assurance](POST_QUANTUM_ASSURANCE.md) - **Comprehensive PQC security model and guarantees** 🔐
+- [Smart Contract Progress](CONTRACT_IMPLEMENTATION_PROGRESS.md) - 98% complete smart contract implementation
+- [UTXO Contract Architecture](UTXO_CONTRACT_ARCHITECTURE.md) - Contract design and architecture
 - [Deployment Guide](DEPLOYMENT.md) - Production deployment
-- [Docker Guide](README-DOCKER.md) - Docker deployment
+- [Docker Guide](DOCKER.md) - Docker deployment
 - [Windows Setup](WINDOWS_SETUP_GUIDE.md) - Windows development setup
-- [Technical Specification](Boundless_BLS_Platform_Technical_Specification_and_Implementation.pdf)
+
+### Archived Documentation
+Historical implementation reports and guides have been archived. See:
+- [Documentation Index](DOCUMENTATION_INDEX.md) - Complete catalog including archived docs
+- [Archived Reports](docs/archive/) - Historical progress reports and implementation guides
 
 ## License
 

@@ -1,0 +1,61 @@
+{
+  "name": "IdentityAccessControl",
+  "version": "1.0.0",
+  "functions": [
+    {
+      "name": "grantRole",
+      "inputs": [
+        {"name": "identityId", "type": "address"},
+        {"name": "role", "type": "string"}
+      ],
+      "outputs": [
+        {"name": "success", "type": "bool"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "revokeRole",
+      "inputs": [
+        {"name": "identityId", "type": "address"},
+        {"name": "role", "type": "string"}
+      ],
+      "outputs": [
+        {"name": "success", "type": "bool"}
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "checkAccess",
+      "inputs": [
+        {"name": "identityId", "type": "address"},
+        {"name": "resource", "type": "string"}
+      ],
+      "outputs": [
+        {"name": "hasAccess", "type": "bool"}
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "name": "getRole",
+      "inputs": [
+        {"name": "identityId", "type": "address"}
+      ],
+      "outputs": [
+        {"name": "role", "type": "string"}
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "name": "requireAttestation",
+      "inputs": [
+        {"name": "resource", "type": "string"},
+        {"name": "attestationType", "type": "string"},
+        {"name": "minLevel", "type": "uint8"}
+      ],
+      "outputs": [
+        {"name": "success", "type": "bool"}
+      ],
+      "stateMutability": "nonpayable"
+    }
+  ]
+}
