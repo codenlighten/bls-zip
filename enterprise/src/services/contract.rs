@@ -356,16 +356,61 @@ impl ContractService {
         .fetch_one(&self.pool)
         .await?;
 
-        // TODO: Asynchronously deploy to blockchain
-        // For now, we mark it as deployed with a mock address
-        self.mark_deployed(
-            contract_id,
-            format!("0x{}", hex::encode(&contract_id.as_bytes()[..20])),
-            "0x0000000000000000000000000000000000000000000000000000000000000000".to_string(),
-            request.gas_limit.unwrap_or(50_000_000),
-        ).await?;
+        // Deploy to blockchain (real or mock depending on configuration)
+        if let Some(_client) = &self.blockchain_client {
+            // Real blockchain deployment
+            tracing::info!(
+                "Deploying contract {} to blockchain using real Boundless node",
+                contract_id
+            );
 
-        Ok(contract)
+            // NOTE: This requires transaction building and key management infrastructure
+            // TODO: Implement complete deployment flow:
+            // 1. Load deployer wallet/key from secure storage
+            // 2. Get UTXOs for deployer address
+            // 3. Build transaction with WASM bytecode in data field
+            // 4. Sign transaction with deployer key
+            // 5. Submit via blockchain client
+            // 6. Poll for confirmation
+            // 7. Extract contract address from transaction receipt
+
+            // For now, log the limitation and use supervised mock mode
+            tracing::warn!(
+                "Contract deployment requires transaction building and key management. \
+                This will be completed in the next implementation phase. \
+                Marking contract as 'Pending' - admin must deploy manually via blockchain node."
+            );
+
+            // Keep contract in Pending status - manual deployment required
+            sqlx::query!(
+                r#"
+                UPDATE contracts
+                SET status = $1
+                WHERE contract_id = $2
+                "#,
+                ContractStatus::Pending as ContractStatus,
+                contract_id,
+            )
+            .execute(&self.pool)
+            .await?;
+
+            Ok(contract)
+        } else {
+            // Mock mode for development/testing
+            tracing::warn!(
+                "MOCK MODE: Contract {} deployment simulated (blockchain client not configured)",
+                contract_id
+            );
+
+            self.mark_deployed(
+                contract_id,
+                format!("0x{}", hex::encode(&contract_id.as_bytes()[..20])),
+                "0x0000000000000000000000000000000000000000000000000000000000000000".to_string(),
+                request.gas_limit.unwrap_or(50_000_000),
+            ).await?;
+
+            Ok(contract)
+        }
     }
 
     /// Get contract by ID
@@ -450,26 +495,60 @@ impl ContractService {
             ));
         }
 
-        // TODO: Call contract on blockchain
-        // For now, return mock response
-        let response = serde_json::json!({
-            "success": true,
-            "result": {
-                "message": "Contract call successful (mocked)",
+        // Call contract (real or mock depending on configuration)
+        let response = if let Some(_client) = &self.blockchain_client {
+            // Real blockchain contract call
+            tracing::info!(
+                "Calling contract {} method '{}' on blockchain",
+                contract_id,
+                request.method_name
+            );
+
+            // TODO: Implement contract call via blockchain client
+            // This requires:
+            // 1. Contract ABI to encode method call
+            // 2. Query contract state via RPC
+            // 3. Decode response based on ABI
+            // For now, return informative error
+            tracing::warn!(
+                "Contract read calls require ABI encoding/decoding infrastructure. \
+                This will be implemented in the next phase."
+            );
+
+            serde_json::json!({
+                "success": false,
+                "error": "Contract calls require ABI infrastructure (not yet implemented)",
                 "method": request.method_name,
-                "gas_used": 10000
-            }
-        });
+                "contract_id": contract_id.to_string()
+            })
+        } else {
+            // Mock mode for development/testing
+            tracing::warn!(
+                "MOCK MODE: Contract call simulated (blockchain client not configured)"
+            );
+
+            serde_json::json!({
+                "success": true,
+                "result": {
+                    "message": "Contract call successful (mocked)",
+                    "method": request.method_name,
+                    "gas_used": 10000
+                }
+            })
+        };
 
         // Record interaction
+        let gas_used = if self.blockchain_client.is_some() { None } else { Some(10000) };
+        let status = if self.blockchain_client.is_some() { "pending_implementation" } else { "success" };
+
         self.record_interaction(
             contract_id,
             identity_id,
             request.method_name.clone(),
             request.method_args.clone(),
             None, // No tx hash for read-only calls
-            "success".to_string(),
-            Some(10000),
+            status.to_string(),
+            gas_used,
             Some(response.clone()),
             None,
         ).await?;
@@ -493,14 +572,51 @@ impl ContractService {
             ));
         }
 
-        // TODO: Send transaction to blockchain
-        // For now, return mock response
-        let tx_hash = format!("0x{}", hex::encode(&Uuid::new_v4().as_bytes()));
-        let response = serde_json::json!({
-            "success": true,
-            "tx_hash": tx_hash,
-            "gas_used": 50000
-        });
+        // Send transaction (real or mock depending on configuration)
+        let (response, tx_hash, status, gas_used) = if let Some(_client) = &self.blockchain_client {
+            // Real blockchain transaction
+            tracing::info!(
+                "Sending transaction to contract {} method '{}'",
+                contract_id,
+                request.method_name
+            );
+
+            // TODO: Implement transaction sending via blockchain client
+            // This requires:
+            // 1. Contract ABI to encode method call
+            // 2. Build transaction with encoded call data
+            // 3. Sign transaction with user's key
+            // 4. Submit via blockchain client
+            // 5. Poll for confirmation
+            // For now, return informative error
+            tracing::warn!(
+                "Contract transactions require ABI encoding and key management infrastructure. \
+                This will be implemented in the next phase."
+            );
+
+            let resp = serde_json::json!({
+                "success": false,
+                "error": "Contract transactions require ABI and key management (not yet implemented)",
+                "method": request.method_name,
+                "contract_id": contract_id.to_string()
+            });
+
+            (resp, None, "pending_implementation".to_string(), None)
+        } else {
+            // Mock mode for development/testing
+            tracing::warn!(
+                "MOCK MODE: Contract transaction simulated (blockchain client not configured)"
+            );
+
+            let mock_tx_hash = format!("0x{}", hex::encode(&Uuid::new_v4().as_bytes()));
+            let resp = serde_json::json!({
+                "success": true,
+                "tx_hash": mock_tx_hash,
+                "gas_used": 50000
+            });
+
+            (resp, Some(mock_tx_hash), "success".to_string(), Some(50000))
+        };
 
         // Record interaction
         self.record_interaction(
@@ -508,9 +624,9 @@ impl ContractService {
             identity_id,
             request.method_name.clone(),
             request.method_args.clone(),
-            Some(tx_hash),
-            "success".to_string(),
-            Some(50000),
+            tx_hash,
+            status,
+            gas_used,
             Some(response.clone()),
             None,
         ).await?;

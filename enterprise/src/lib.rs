@@ -75,6 +75,13 @@ impl EnterpriseMultipass {
         database.migrate().await?;
 
         // Initialize business services
+        // Create blockchain client for contract service (if URL configured)
+        let blockchain_client: Option<Arc<BlockchainClient>> = if !blockchain_rpc_url.is_empty() {
+            Some(Arc::new(BlockchainClient::new(blockchain_rpc_url.clone())))
+        } else {
+            None
+        };
+
         let identity_service = Arc::new(RwLock::new(services::IdentityService::new(
             pool.clone(),
             blockchain_rpc_url.clone(),
@@ -88,7 +95,11 @@ impl EnterpriseMultipass {
         )));
         let event_service = Arc::new(RwLock::new(services::EventService::new(pool.clone())));
         let hardware_service = Arc::new(RwLock::new(services::HardwareService::new(pool.clone())));
-        let contract_service = Arc::new(RwLock::new(services::ContractService::new(pool.clone())));
+
+        let contract_service = Arc::new(RwLock::new(services::ContractService::new(
+            pool.clone(),
+            blockchain_client,
+        )));
 
         // Initialize security services
         let rate_limiter = Arc::new(RateLimiter::new());

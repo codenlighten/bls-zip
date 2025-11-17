@@ -47,9 +47,53 @@ pub fn new(pool: PgPool, blockchain_client: Option<Arc<BlockchainClient>>) -> Se
 
 ---
 
+### ✅ Step 2: Updated Contract Methods with Blockchain Client (COMPLETED)
+
+**Files Modified**:
+- `enterprise/src/services/contract.rs`
+- `enterprise/src/lib.rs`
+
+**Changes**:
+1. Updated `deploy_contract()` method to check for blockchain client availability
+   - If client exists: Logs blockchain deployment attempt, documents TODOs for transaction building/key management, keeps contract in Pending status
+   - If no client: Falls back to mock mode with clear warnings
+
+2. Updated `call_contract()` method to check for blockchain client
+   - If client exists: Returns informative error about ABI infrastructure needed
+   - If no client: Uses mock mode
+
+3. Updated `send_transaction()` method to check for blockchain client
+   - If client exists: Returns informative error about ABI and key management needed
+   - If no client: Uses mock mode
+
+4. Updated service initialization in `lib.rs`
+   - Creates blockchain client from `blockchain_rpc_url` configuration
+   - Passes blockchain client to `ContractService::new()`
+   - Uses empty string check for optional configuration
+
+**Code Verification**:
+- ✅ Code compiles successfully (`cargo check` passed)
+- ✅ No compilation errors
+- ✅ Warnings only from unrelated dependencies
+
+**Benefits**:
+- ✅ Infrastructure in place for blockchain integration
+- ✅ Clear logging shows mock vs real mode
+- ✅ Backward compatible with existing mock behavior
+- ✅ Documents remaining work (transaction building, key management, ABI handling)
+
+**Remaining Work**:
+1. Transaction building infrastructure (UTXO selection, signing)
+2. Key management system (secure storage, signing)
+3. ABI encoding/decoding for contract calls
+4. WASM bytecode loading from compiled contracts
+5. Receipt polling and confirmation waiting
+
+---
+
 ## Next Steps
 
-### Step 2: Update deploy_contract Method (IN PROGRESS)
+### ✅ Step 2: Update deploy_contract Method (COMPLETED - Partial)
 
 Need to replace mock implementation with real blockchain integration:
 
