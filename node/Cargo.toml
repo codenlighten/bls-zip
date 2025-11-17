@@ -1,0 +1,52 @@
+[package]
+name = "boundless-node"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "boundless-node"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace crates
+boundless-core = { path = "../core" }
+boundless-consensus = { path = "../consensus" }
+boundless-crypto = { path = "../crypto" }
+boundless-wasm-runtime = { path = "../wasm-runtime" }
+boundless-rpc = { path = "../rpc" }
+boundless-storage = { path = "../storage" }
+boundless-p2p = { path = "../p2p" }
+
+# Async runtime
+tokio.workspace = true
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+# Logging
+tracing.workspace = true
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow.workspace = true
+thiserror.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+toml = "0.8"
+
+# Utils
+hex.workspace = true
+sha3.workspace = true
+chrono = "0.4"
+
+# HIGH PRIORITY FIX: Metrics/monitoring
+prometheus = { version = "0.13", features = ["process"] }
+hyper = { version = "0.14", features = ["server", "http1", "tcp"] }
+
+[dev-dependencies]
+tempfile = "3.8"
+futures = "0.3"

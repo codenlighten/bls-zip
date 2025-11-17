@@ -1,0 +1,6 @@
+                // FIXME: Removed subscriber check - gossipsub will handle message routing
+                // if self.blocks_subscribers.is_empty() {
+                //     // No subscribers yet, this is expected during startup
+                //     return;
+                // }
+

@@ -1,0 +1,109 @@
+# Boundless BLS Node Configuration Example
+# Copy this file to config.toml and customize for your node
+
+# Network Configuration
+[network]
+# P2P listen address (multiaddr format)
+listen_addr = "/ip4/0.0.0.0/tcp/30333"
+
+# Bootstrap nodes to connect to (multiaddr format)
+bootnodes = [
+    # "/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWExample1...",
+    # "/ip4/192.168.1.100/tcp/30333/p2p/12D3KooWExample2...",
+]
+
+# Consensus Configuration
+[consensus]
+# Target block time in seconds
+target_block_time_secs = 300
+
+# Difficulty adjustment interval in blocks
+difficulty_adjustment_interval = 1008
+
+# Maximum adjustment factor for difficulty
+max_adjustment_factor = 4
+
+# Storage Configuration
+[storage]
+# Database path (relative or absolute)
+database_path = "/var/lib/boundless/db"
+
+# Cache size in megabytes
+cache_size_mb = 2048
+
+# RPC Configuration
+[rpc]
+# HTTP RPC address
+http_addr = "127.0.0.1:9933"
+
+# WebSocket RPC address
+ws_addr = "127.0.0.1:9944"
+
+# CORS allowed origins (use ["*"] for development only)
+cors_allowed_origins = []
+
+# Mempool Configuration
+[mempool]
+# Maximum number of transactions in mempool
+max_transactions = 10000
+
+# Maximum mempool size in bytes
+max_size_bytes = 104857600  # 100MB
+
+# Minimum transaction fee (in smallest unit)
+min_fee = 1000
+
+# Transaction expiry time in seconds
+transaction_expiry_secs = 3600
+
+# Mining Configuration
+[mining]
+# Enable mining
+enabled = false
+
+# Number of mining threads (0 = auto-detect CPU cores)
+threads = 0
+
+# Coinbase reward address (hex-encoded 32 bytes)
+# IMPORTANT: Set this to your address before enabling mining
+coinbase_address = ""
+
+# Security Configuration
+[security]
+# Enable TLS for RPC (RECOMMENDED for production)
+enable_tls = false
+
+# Maximum RPC request size in bytes
+max_request_size_bytes = 1000000  # 1MB
+
+# Rate limit: requests per minute per IP
+rate_limit_per_minute = 60
+
+# Require authentication for RPC (RECOMMENDED for production)
+require_authentication = false
+
+# Operational Configuration
+[operational]
+# Enable Prometheus metrics endpoint
+enable_metrics = false
+
+# Metrics endpoint address
+metrics_addr = "127.0.0.1:9615"
+
+# Enable health check endpoint
+enable_health_check = true
+
+# Graceful shutdown timeout in seconds
+shutdown_timeout_secs = 10
+
+# Log level: trace, debug, info, warn, error
+log_level = "info"
+
+# Enable structured logging (JSON format)
+# Useful for log aggregation systems like ELK, Splunk
+structured_logging = false
+
+# Checkpoint interval in blocks
+# Checkpoints prevent deep reorganizations and 51% attacks
+# Set to 0 to disable auto-checkpointing (not recommended for production)
+checkpoint_interval = 1000

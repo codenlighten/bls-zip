@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+target/
+**/target/
+
+# Data directories
+data/
+data2/
+*.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+docs/
+
+# CI/CD
+.github/
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Test files
+**/tests/
+
+# Temporary files
+*.tmp
+*.log
+
+# Environment files (may contain secrets)
+.env
+.env.*
+!.env.example

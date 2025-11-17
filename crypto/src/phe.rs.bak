@@ -1,0 +1,223 @@
+// Partially Homomorphic Encryption using Paillier cryptosystem
+use paillier::*;
+use crate::error::CryptoError;
+
+/// Paillier PHE wrapper for privacy-preserving computations
+pub struct PaillierPhe {
+    key_size: usize,
+}
+
+ntype Result<T> = std::result::Result<T, CryptoError>;
+impl PaillierPhe {
+    /// Create a new Paillier instance with specified key size
+    pub fn new(key_size: usize) -> Self {
+        Self { key_size }
+    }
+
+    /// Generate a Paillier keypair
+    pub fn keypair(&self) -> Result<(EncryptionKey, DecryptionKey), CryptoError> {
+        let (ek, dk) = Paillier::keypair_with_modulus_size(self.key_size)
+            .generate_keypair();
+        Ok((ek, dk))
+    }
+
+    /// Encrypt a value
+    pub fn encrypt(
+        &self,
+        plaintext: u64,
+        encryption_key: &EncryptionKey,
+    ) -> Result<RawCiphertext<'static>, CryptoError> {
+        let encoded = EncodedPlaintext::from(plaintext);
+        let ciphertext = Paillier::encrypt(encryption_key, encoded);
+        Ok(ciphertext)
+    }
+
+    /// Decrypt a ciphertext
+    pub fn decrypt(
+        &self,
+        ciphertext: &RawCiphertext,
+        decryption_key: &DecryptionKey,
+    ) -> Result<u64, CryptoError> {
+        let plaintext = Paillier::decrypt(decryption_key, ciphertext);
+        let value: u64 = plaintext.0.try_into()
+            .map_err(|_| CryptoError::DecryptionError("Value out of range".to_string()))?;
+        Ok(value)
+    }
+
+    /// Homomorphic addition: E(m1) + E(m2) = E(m1 + m2)
+    pub fn add(
+        &self,
+        encryption_key: &EncryptionKey,
+        ct1: &RawCiphertext,
+        ct2: &RawCiphertext,
+    ) -> RawCiphertext<'static> {
+        Paillier::add(encryption_key, ct1.clone(), ct2.clone())
+    }
+
+    /// Homomorphic scalar multiplication: k * E(m) = E(k * m)
+    pub fn mul(
+        &self,
+        encryption_key: &EncryptionKey,
+        ciphertext: &RawCiphertext,
+        scalar: u64,
+    ) -> RawCiphertext<'static> {
+        let encoded_scalar = EncodedPlaintext::from(scalar);
+        Paillier::mul(encryption_key, ciphertext.clone(), encoded_scalar)
+    }
+}
+
+impl Default for PaillierPhe {
+    fn default() -> Self {
+        Self::new(2048)
+    }
+}
+
+/// Privacy-preserving sum aggregation
+pub struct PrivateAggregator {
+    phe: PaillierPhe,
+}
+
+impl PrivateAggregator {
+    pub fn new() -> Self {
+        Self {
+            phe: PaillierPhe::default(),
+        }
+    }
+
+    /// Compute sum of encrypted values without decrypting
+    pub fn sum_encrypted(
+        &self,
+        encryption_key: &EncryptionKey,
+        ciphertexts: &[RawCiphertext],
+    ) -> Result<RawCiphertext<'static>, CryptoError> {
+        if ciphertexts.is_empty() {
+            return Err(CryptoError::PheError("Empty ciphertext list".to_string()));
+        }
+
+        let mut result = ciphertexts[0].clone();
+        for ct in &ciphertexts[1..] {
+            result = self.phe.add(encryption_key, &result, ct);
+        }
+
+        Ok(result)
+    }
+
+    /// Compute weighted sum: Σ(w_i * E(x_i))
+    pub fn weighted_sum(
+        &self,
+        encryption_key: &EncryptionKey,
+        ciphertexts: &[RawCiphertext],
+        weights: &[u64],
+    ) -> Result<RawCiphertext<'static>, CryptoError> {
+        if ciphertexts.len() != weights.len() {
+            return Err(CryptoError::PheError("Mismatched lengths".to_string()));
+        }
+
+        if ciphertexts.is_empty() {
+            return Err(CryptoError::PheError("Empty input".to_string()));
+        }
+
+        let mut result = self.phe.mul(encryption_key, &ciphertexts[0], weights[0]);
+
+        for i in 1..ciphertexts.len() {
+            let weighted = self.phe.mul(encryption_key, &ciphertexts[i], weights[i]);
+            result = self.phe.add(encryption_key, &result, &weighted);
+        }
+
+        Ok(result)
+    }
+}
+
+impl Default for PrivateAggregator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_paillier_encryption() {
+        let phe = PaillierPhe::new(1024);
+        let (ek, dk) = phe.keypair().unwrap();
+
+        let plaintext = 42u64;
+        let ciphertext = phe.encrypt(plaintext, &ek).unwrap();
+        let decrypted = phe.decrypt(&ciphertext, &dk).unwrap();
+
+        assert_eq!(plaintext, decrypted);
+    }
+
+    #[test]
+    fn test_homomorphic_addition() {
+        let phe = PaillierPhe::new(1024);
+        let (ek, dk) = phe.keypair().unwrap();
+
+        let m1 = 15u64;
+        let m2 = 27u64;
+
+        let ct1 = phe.encrypt(m1, &ek).unwrap();
+        let ct2 = phe.encrypt(m2, &ek).unwrap();
+
+        let ct_sum = phe.add(&ek, &ct1, &ct2);
+        let sum = phe.decrypt(&ct_sum, &dk).unwrap();
+
+        assert_eq!(sum, m1 + m2);
+    }
+
+    #[test]
+    fn test_homomorphic_multiplication() {
+        let phe = PaillierPhe::new(1024);
+        let (ek, dk) = phe.keypair().unwrap();
+
+        let m = 7u64;
+        let k = 6u64;
+
+        let ct = phe.encrypt(m, &ek).unwrap();
+        let ct_mul = phe.mul(&ek, &ct, k);
+        let result = phe.decrypt(&ct_mul, &dk).unwrap();
+
+        assert_eq!(result, m * k);
+    }
+
+    #[test]
+    fn test_private_aggregation() {
+        let aggregator = PrivateAggregator::new();
+        let phe = PaillierPhe::new(1024);
+        let (ek, dk) = phe.keypair().unwrap();
+
+        let values = vec![10u64, 20, 30, 40];
+        let ciphertexts: Vec<_> = values
+            .iter()
+            .map(|&v| phe.encrypt(v, &ek).unwrap())
+            .collect();
+
+        let ct_sum = aggregator.sum_encrypted(&ek, &ciphertexts).unwrap();
+        let sum = phe.decrypt(&ct_sum, &dk).unwrap();
+
+        assert_eq!(sum, values.iter().sum());
+    }
+
+    #[test]
+    fn test_weighted_sum() {
+        let aggregator = PrivateAggregator::new();
+        let phe = PaillierPhe::new(1024);
+        let (ek, dk) = phe.keypair().unwrap();
+
+        let values = vec![5u64, 10, 15];
+        let weights = vec![2u64, 3, 4];
+
+        let ciphertexts: Vec<_> = values
+            .iter()
+            .map(|&v| phe.encrypt(v, &ek).unwrap())
+            .collect();
+
+        let ct_weighted = aggregator.weighted_sum(&ek, &ciphertexts, &weights).unwrap();
+        let result = phe.decrypt(&ct_weighted, &dk).unwrap();
+
+        let expected: u64 = values.iter().zip(&weights).map(|(v, w)| v * w).sum();
+        assert_eq!(result, expected);
+    }
+}

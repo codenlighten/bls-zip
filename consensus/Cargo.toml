@@ -1,0 +1,22 @@
+[package]
+name = "boundless-consensus"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+sha3.workspace = true
+primitive-types.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+hex.workspace = true
+
+# Local dependencies
+boundless-core = { path = "../core" }
+
+# Time
+chrono = "0.4"
+
+[dev-dependencies]

@@ -1,0 +1,109 @@
+#!/bin/bash
+# Pre-commit hook to prevent committing secrets
+# Install: cp hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+set -e
+
+BOLD='\033[1m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Check if .env files are being committed
+if git diff --cached --name-only | grep -qE '\.env$|\.env\.local$'; then
+    echo -e "${RED}${BOLD}❌ ERROR: Attempting to commit .env file!${NC}"
+    echo ""
+    echo ".env files contain secrets and should NEVER be committed to version control."
+    echo ""
+    echo "Files being committed:"
+    git diff --cached --name-only | grep -E '\.env$|\.env\.local$' | while read file; do
+        echo -e "  ${RED}✗${NC} $file"
+    done
+    echo ""
+    echo "To fix:"
+    echo "  1. Remove from staging: git reset HEAD .env"
+    echo "  2. Ensure .env is in .gitignore"
+    echo "  3. Use .env.example for templates"
+    echo ""
+    exit 1
+fi
+
+# Scan for potential secrets in staged changes
+echo "🔍 Scanning for potential secrets..."
+
+# Patterns that might indicate secrets
+SECRET_PATTERNS=(
+    "password\s*=\s*['\"]?[^'\"\s]{8,}"
+    "secret\s*=\s*['\"]?[^'\"\s]{16,}"
+    "api[-_]?key\s*=\s*['\"]?[^'\"\s]{16,}"
+    "token\s*=\s*['\"]?[^'\"\s]{16,}"
+    "private[-_]?key\s*=\s*['\"]?[^'\"\s]{32,}"
+    "master[-_]?key\s*=\s*['\"]?[^'\"\s]{32,}"
+    "-----BEGIN\s+(RSA|DSA|EC|OPENSSH)\s+PRIVATE\s+KEY-----"
+    "AWS[-_]?ACCESS[-_]?KEY"
+    "AKIA[0-9A-Z]{16}"  # AWS Access Key pattern
+)
+
+# Check staged changes for secrets
+POTENTIAL_SECRETS_FOUND=false
+
+for pattern in "${SECRET_PATTERNS[@]}"; do
+    if git diff --cached | grep -iE "$pattern" | grep -qvE "\.env\.example|\.md$|\.txt$|pre-commit"; then
+        if [ "$POTENTIAL_SECRETS_FOUND" = false ]; then
+            echo ""
+            echo -e "${YELLOW}${BOLD}⚠️  WARNING: Potential secret detected in commit!${NC}"
+            echo ""
+            POTENTIAL_SECRETS_FOUND=true
+        fi
+
+        # Show the matching lines (without showing the actual secret)
+        git diff --cached | grep -iE "$pattern" | grep -vE "\.env\.example|\.md$|\.txt$|pre-commit" | head -5 | while read line; do
+            # Mask the secret value
+            masked_line=$(echo "$line" | sed -E 's/(password|secret|key|token)\s*=\s*['"'"'"]?([^'"'"'"]*)['"'"'"]?/\1=***MASKED***/gi')
+            echo -e "  ${YELLOW}!${NC} $masked_line"
+        done
+    fi
+done
+
+if [ "$POTENTIAL_SECRETS_FOUND" = true ]; then
+    echo ""
+    echo "Please review the above warnings carefully."
+    echo "If these are NOT actual secrets (e.g., documentation, examples), you can continue."
+    echo ""
+    read -p "Continue with commit anyway? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo ""
+        echo -e "${RED}Commit aborted.${NC}"
+        exit 1
+    fi
+fi
+
+# Check for common placeholder secrets that shouldn't be committed
+PLACEHOLDER_SECRETS=(
+    "changeme"
+    "replaceme"
+    "dev_secret_key"
+    "test_password"
+    "admin:admin"
+    "postgres:postgres"
+)
+
+for placeholder in "${PLACEHOLDER_SECRETS[@]}"; do
+    if git diff --cached | grep -iqF "$placeholder" | grep -qvE "\.env\.example|\.md$|\.txt$|pre-commit"; then
+        echo ""
+        echo -e "${YELLOW}${BOLD}⚠️  WARNING: Placeholder secret detected!${NC}"
+        echo ""
+        echo "Found: $placeholder"
+        echo ""
+        echo "This looks like a placeholder that shouldn't be in production code."
+        read -p "Continue anyway? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+done
+
+echo -e "${BOLD}✅ Pre-commit checks passed${NC}"
+exit 0

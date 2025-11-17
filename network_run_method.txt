@@ -1,0 +1,83 @@
+    /// Run the network event loop (owns the Swarm, should be spawned in dedicated task)
+    pub async fn run(
+        mut self,
+        mut command_rx: tokio::sync::mpsc::UnboundedReceiver<crate::service::NetworkCommand>,
+    ) {
+        use crate::service::NetworkCommand;
+        use futures::StreamExt;
+
+        info!("▶️  Starting P2P network event loop");
+
+        loop {
+            tokio::select! {
+                // Handle commands from the application
+                Some(command) = command_rx.recv() => {
+                    self.handle_command(command).await;
+                }
+
+                // Handle swarm events
+                event = self.swarm.select_next_some() => {
+                    self.handle_swarm_event(event).await;
+                }
+            }
+        }
+    }
+
+    /// Handle commands from the application
+    async fn handle_command(&mut self, command: NetworkCommand) {
+        match command {
+            NetworkCommand::BroadcastBlock(block) => {
+                let message = Message::NewBlock { block: (*block).clone() };
+                if let Ok(data) = bincode::serialize(&message) {
+                    if let Err(e) = self.swarm.behaviour_mut().gossipsub.publish(
+                        self.blocks_topic.clone(),
+                        data
+                    ) {
+                        warn!("Failed to broadcast block: {}", e);
+                    } else {
+                        info!("📢 Broadcasted block #{}", block.header.height);
+                    }
+                }
+            }
+
+            NetworkCommand::BroadcastTransaction(tx) => {
+                let message = Message::NewTransaction { transaction: (*tx).clone() };
+                if let Ok(data) = bincode::serialize(&message) {
+                    if let Err(e) = self.swarm.behaviour_mut().gossipsub.publish(
+                        self.transactions_topic.clone(),
+                        data
+                    ) {
+                        warn!("Failed to broadcast transaction: {}", e);
+                    } else {
+                        info!("📢 Broadcasted transaction {}", hex::encode(tx.hash()));
+                    }
+                }
+            }
+
+            NetworkCommand::SendStatus { peer_id, height, best_hash } => {
+                let message = Message::Status { height, best_hash };
+                if let Ok(data) = bincode::serialize(&message) {
+                    if let Err(e) = self.swarm.behaviour_mut().gossipsub.publish(
+                        self.blocks_topic.clone(),
+                        data
+                    ) {
+                        warn!("Failed to send status to {}: {}", peer_id, e);
+                    }
+                }
+            }
+
+            NetworkCommand::RequestBlocks { peer_id, start_height, count } => {
+                let message = Message::GetBlocks { start_height, count };
+                if let Ok(data) = bincode::serialize(&message) {
+                    if let Err(e) = self.swarm.behaviour_mut().gossipsub.publish(
+                        self.blocks_topic.clone(),
+                        data
+                    ) {
+                        warn!("Failed to request blocks from {}: {}", peer_id, e);
+                    } else {
+                        info!("📨 Requested {} blocks from {} starting at height {}", count, peer_id, start_height);
+                    }
+                }
+            }
+        }
+    }

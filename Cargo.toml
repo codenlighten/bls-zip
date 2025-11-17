@@ -1,0 +1,79 @@
+# Boundless BLS Platform - Rust Workspace
+[workspace]
+resolver = "2"
+members = [
+    "node",
+    "core",
+    "consensus",
+    "crypto",
+    "wasm-runtime",
+    "p2p",
+    "rpc",
+    "storage",
+    "cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Boundless BLS Team"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/boundless-bls/platform"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+async-trait = "0.1"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "1.3"
+
+# Cryptography - Classical
+sha3 = "0.10"
+blake2 = "0.10"
+ed25519-dalek = "2.1"
+
+# Cryptography - Post-Quantum
+# Note: liboqs-rust requires liboqs C library installed
+# Install: https://github.com/open-quantum-safe/liboqs
+oqs = "0.10"
+
+# Networking
+libp2p = { version = "0.53", features = ["tcp", "noise", "yamux", "gossipsub", "mdns", "kad", "macros", "tokio", "request-response"] }
+futures = "0.3"
+
+# Storage
+rocksdb = "0.22"
+
+# WASM Runtime
+wasmtime = "16.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Utilities
+hex = "0.4"
+bs58 = "0.5"
+num-bigint = "0.4"
+num-traits = "0.2"
+primitive-types = "0.12"
+
+# RPC
+jsonrpsee = { version = "0.21", features = ["server", "client"] }
+axum = "0.7"
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"

@@ -1,0 +1,82 @@
+[workspace]
+# Empty workspace to exclude from parent workspace
+
+[package]
+name = "boundless-enterprise"
+version = "0.1.0"
+edition = "2021"
+authors = ["Boundless Team"]
+description = "Enterprise Multipass subsystem for Boundless BLS blockchain"
+license = "MIT OR Apache-2.0"
+
+[[bin]]
+name = "enterprise-server"
+path = "src/bin/server.rs"
+
+[dependencies]
+# Note: Enterprise package is standalone and doesn't depend on other boundless crates
+# to avoid workspace dependency conflicts. It integrates via RPC calls to the node.
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+async-trait = "0.1"
+
+# Web framework
+axum = { version = "0.7", features = ["macros"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "1.3"  # Binary serialization for transactions
+
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
+
+# Utilities
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+dotenv = "0.15"
+
+# Crypto - Passwords & Hashing
+argon2 = "0.5"
+rand = "0.8"
+hex = "0.4"
+sha3 = "0.10"
+
+# Post-Quantum Cryptography (PQC)
+pqcrypto-dilithium = "0.5"  # ML-DSA signatures
+pqcrypto-kyber = "0.8"  # ML-KEM key encapsulation
+pqcrypto-traits = "0.3"
+
+# Encryption & Key Management
+aes-gcm = "0.10"  # AES-256-GCM for keystore
+chacha20poly1305 = "0.10"  # Alternative AEAD cipher
+base64 = "0.22"  # Encoding
+zeroize = "1.7"  # Secure memory wiping
+pbkdf2 = { version = "0.12", features = ["simple"] }  # Key derivation
+
+# Validation
+regex = "1.10"
+
+# JWT
+jsonwebtoken = "9.2"
+
+# HTTP client (for blockchain RPC)
+reqwest = { version = "0.11", features = ["json"] }
+
+# gRPC (optional)
+tonic = { version = "0.11", optional = true }
+prost = { version = "0.12", optional = true }
+
+[features]
+default = []
+grpc = ["tonic", "prost"]
+
+[dev-dependencies]
+tempfile = "3.8"

@@ -1,0 +1,776 @@
+openapi: 3.0.3
+info:
+  title: Boundless Enterprise Multipass API
+  description: |
+    Enterprise-grade unified access and control layer for the Boundless blockchain platform.
+
+    ## Features
+    - Post-Quantum Cryptography (Dilithium5 + Kyber1024)
+    - KYC/AML Identity Management
+    - Multi-Asset Wallet System
+    - Internal Asset Trading Market
+    - Hardware Pass NFC Integration
+    - SSO & Session Management
+    - Enterprise Application Registry
+    - Events & Reporting
+
+    ## Security
+    - All endpoints (except `/api/auth/login` and `/api/auth/register`) require authentication
+    - JWT-based session tokens
+    - Rate limiting on sensitive endpoints
+    - Encrypted private key storage with master encryption key
+
+    ## Base URL
+    `http://localhost:8080` (default development)
+
+  version: 1.0.0
+  contact:
+    name: Boundless Platform
+    url: https://boundless.example.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api.boundless.example.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Identity
+    description: KYC/AML identity profiles and attestations
+  - name: Wallet
+    description: Blockchain wallet management and transactions
+  - name: Assets
+    description: Enterprise asset definitions and issuance
+  - name: Market
+    description: Internal asset trading and order matching
+  - name: Applications
+    description: Enterprise application registry
+  - name: Hardware
+    description: NFC hardware pass management
+  - name: Events
+    description: Notifications and reporting
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from `/api/auth/login`
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+      required:
+        - error
+
+    Identity:
+      type: object
+      properties:
+        identity_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+        kyc_status:
+          type: string
+          enum: [Pending, Verified, Rejected, Expired]
+        created_at:
+          type: string
+          format: date-time
+
+    Wallet:
+      type: object
+      properties:
+        wallet_id:
+          type: string
+          format: uuid
+        identity_id:
+          type: string
+          format: uuid
+        wallet_type:
+          type: string
+          enum: [Personal, Enterprise, Escrow]
+        boundless_address:
+          type: string
+          description: 64-character hex blockchain address
+        created_at:
+          type: string
+          format: date-time
+
+    AssetDefinition:
+      type: object
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        symbol:
+          type: string
+        asset_type:
+          type: string
+          enum: [Native, UtilityToken, EquityToken, CarbonCredit, NFT, SubscriptionPass]
+        total_supply:
+          type: integer
+          format: int64
+        circulating_supply:
+          type: integer
+          format: int64
+
+    MarketOrder:
+      type: object
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        wallet_id:
+          type: string
+          format: uuid
+        asset_id:
+          type: string
+          format: uuid
+        order_type:
+          type: string
+          enum: [Buy, Sell]
+        quantity:
+          type: integer
+          format: int64
+        price:
+          type: integer
+          format: int64
+        filled_quantity:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [Open, PartiallyFilled, Filled, Cancelled]
+
+    Session:
+      type: object
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        identity_id:
+          type: string
+          format: uuid
+        token:
+          type: string
+          description: JWT authentication token
+        expires_at:
+          type: string
+          format: date-time
+
+paths:
+  # =============================================================================
+  # AUTHENTICATION
+  # =============================================================================
+  /api/auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register new user
+      description: Create new identity and authentication credentials
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, full_name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                full_name:
+                  type: string
+      responses:
+        '200':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  identity_id:
+                    type: string
+                    format: uuid
+                  session:
+                    $ref: '#/components/schemas/Session'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login user
+      description: Authenticate with email and password, returns JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many login attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session_id]
+              properties:
+                session_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Logout successful
+        '401':
+          description: Unauthorized
+
+  # =============================================================================
+  # IDENTITY
+  # =============================================================================
+  /api/identity/create:
+    post:
+      tags: [Identity]
+      summary: Create identity profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, full_name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                full_name:
+                  type: string
+                phone:
+                  type: string
+                country:
+                  type: string
+      responses:
+        '200':
+          description: Identity created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Identity'
+
+  /api/identity/{id}:
+    get:
+      tags: [Identity]
+      summary: Get identity by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Identity profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Identity'
+
+  /api/identity/{id}/kyc-status:
+    put:
+      tags: [Identity]
+      summary: Update KYC status
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [Pending, Verified, Rejected, Expired]
+      responses:
+        '200':
+          description: Status updated
+
+  # =============================================================================
+  # WALLET
+  # =============================================================================
+  /api/wallet/create:
+    post:
+      tags: [Wallet]
+      summary: Create blockchain wallet
+      description: Generates PQC keypair and derives Boundless address
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identity_id, wallet_type]
+              properties:
+                identity_id:
+                  type: string
+                  format: uuid
+                wallet_type:
+                  type: string
+                  enum: [Personal, Enterprise, Escrow]
+      responses:
+        '200':
+          description: Wallet created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+
+  /api/wallet/{id}/balances:
+    get:
+      tags: [Wallet]
+      summary: Get wallet balances
+      description: Returns blockchain balances for all assets
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Wallet balances
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  wallet_id:
+                    type: string
+                    format: uuid
+                  balances:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        asset:
+                          type: string
+                        amount:
+                          type: integer
+                          format: int64
+
+  /api/wallet/{id}/transfer:
+    post:
+      tags: [Wallet]
+      summary: Transfer blockchain assets
+      description: Creates and submits signed transaction to Boundless blockchain
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to_address, amount]
+              properties:
+                to_address:
+                  type: string
+                  description: 64-character hex Boundless address
+                amount:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          description: Transfer successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tx_hash:
+                    type: string
+                    description: Blockchain transaction hash
+
+  # =============================================================================
+  # ASSETS
+  # =============================================================================
+  /api/assets/define:
+    post:
+      tags: [Assets]
+      summary: Define new asset
+      description: Create enterprise asset definition (tokens, carbon credits, NFTs, etc.)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, symbol, asset_type, total_supply]
+              properties:
+                name:
+                  type: string
+                symbol:
+                  type: string
+                asset_type:
+                  type: string
+                  enum: [Native, UtilityToken, EquityToken, CarbonCredit, NFT, SubscriptionPass]
+                total_supply:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          description: Asset defined
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetDefinition'
+
+  /api/assets/list:
+    get:
+      tags: [Assets]
+      summary: List all assets
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Asset list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssetDefinition'
+
+  /api/assets/{asset_id}/issue:
+    post:
+      tags: [Assets]
+      summary: Issue asset tokens
+      description: Mint new tokens to a wallet
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: asset_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wallet_id, quantity]
+              properties:
+                wallet_id:
+                  type: string
+                  format: uuid
+                quantity:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          description: Asset issued
+
+  /api/assets/{asset_id}/transfer:
+    post:
+      tags: [Assets]
+      summary: Transfer asset
+      description: Transfer asset tokens between wallets with blockchain settlement
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: asset_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [from_wallet_id, to_wallet_id, quantity]
+              properties:
+                from_wallet_id:
+                  type: string
+                  format: uuid
+                to_wallet_id:
+                  type: string
+                  format: uuid
+                quantity:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          description: Transfer successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tx_hash:
+                    type: string
+                    description: Blockchain transaction hash
+
+  # =============================================================================
+  # MARKET
+  # =============================================================================
+  /api/market/orders:
+    post:
+      tags: [Market]
+      summary: Create market order
+      description: Place buy or sell order on internal trading market
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wallet_id, asset_id, order_type, quantity, price]
+              properties:
+                wallet_id:
+                  type: string
+                  format: uuid
+                asset_id:
+                  type: string
+                  format: uuid
+                order_type:
+                  type: string
+                  enum: [Buy, Sell]
+                quantity:
+                  type: integer
+                  format: int64
+                price:
+                  type: integer
+                  format: int64
+      responses:
+        '200':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketOrder'
+
+  /api/market/orderbook/{asset_id}:
+    get:
+      tags: [Market]
+      summary: Get order book
+      description: Returns active buy and sell orders for an asset
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: asset_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order book
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bids:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MarketOrder'
+                  asks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MarketOrder'
+
+  /api/market/positions/{wallet_id}:
+    get:
+      tags: [Market]
+      summary: Get wallet positions
+      description: Returns all asset positions with locked/available quantities
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: wallet_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Wallet positions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    asset_id:
+                      type: string
+                      format: uuid
+                    quantity:
+                      type: integer
+                      format: int64
+                    locked_quantity:
+                      type: integer
+                      format: int64
+                    average_cost:
+                      type: integer
+                      format: int64
+
+  # =============================================================================
+  # HARDWARE PASS
+  # =============================================================================
+  /api/hardware/register:
+    post:
+      tags: [Hardware]
+      summary: Register NFC hardware device
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identity_id, device_name, hardware_id]
+              properties:
+                identity_id:
+                  type: string
+                  format: uuid
+                device_name:
+                  type: string
+                hardware_id:
+                  type: string
+                  description: Unique hardware identifier
+      responses:
+        '200':
+          description: Device registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device_id:
+                    type: string
+                    format: uuid
+
+  /api/hardware/{device_id}/authenticate:
+    post:
+      tags: [Hardware]
+      summary: Authenticate with hardware device
+      description: Challenge-response authentication with NFC device
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [challenge_response]
+              properties:
+                challenge_response:
+                  type: string
+                  description: Signed challenge from hardware device
+      responses:
+        '200':
+          description: Authentication successful
+
+security:
+  - BearerAuth: []

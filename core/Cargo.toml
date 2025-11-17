@@ -1,0 +1,28 @@
+[package]
+name = "boundless-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+serde.workspace = true
+serde_json.workspace = true
+sha3.workspace = true
+hex.workspace = true
+primitive-types.workspace = true
+thiserror.workspace = true
+
+# PQC
+oqs.workspace = true
+
+# Crypto dependencies for signature verification
+boundless-crypto = { path = "../crypto" }
+ed25519-dalek = { version = "2.1", features = ["rand_core"] }
+bincode = "1.3"
+
+# Time
+chrono = "0.4"
+
+[dev-dependencies]
