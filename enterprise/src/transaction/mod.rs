@@ -9,9 +9,11 @@
 
 pub mod builder;
 pub mod signer;
+pub mod deployment;
 
 pub use builder::{TransactionBuilder, UnspentOutput};
 pub use signer::TransactionSigner;
+pub use deployment::{DeployerKey, DeploymentBuilder, UtxoInfo};
 
 // Re-export core transaction types for convenience
 use serde::{Deserialize, Serialize};

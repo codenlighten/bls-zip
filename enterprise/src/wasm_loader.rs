@@ -74,7 +74,7 @@ impl WasmLoader {
 
         // Load from external file
         let wasm_dir = self.wasm_dir.as_ref()
-            .ok_or_else(|| EnterpriseError::ConfigError(
+            .ok_or_else(|| EnterpriseError::ValidationError(
                 "WASM directory not configured".to_string()
             ))?;
 
@@ -82,7 +82,7 @@ impl WasmLoader {
         let wasm_path = wasm_dir.join(&wasm_filename);
 
         if !wasm_path.exists() {
-            return Err(EnterpriseError::ConfigError(
+            return Err(EnterpriseError::ValidationError(
                 format!(
                     "WASM file not found: {}. Expected at: {}",
                     wasm_filename,
@@ -98,13 +98,13 @@ impl WasmLoader {
         );
 
         let wasm_bytes = fs::read(&wasm_path)
-            .map_err(|e| EnterpriseError::ConfigError(
+            .map_err(|e| EnterpriseError::Internal(
                 format!("Failed to read WASM file {}: {}", wasm_path.display(), e)
             ))?;
 
         // Basic validation: check WASM magic number
         if wasm_bytes.len() < 4 || &wasm_bytes[0..4] != b"\0asm" {
-            return Err(EnterpriseError::ConfigError(
+            return Err(EnterpriseError::ValidationError(
                 format!("Invalid WASM file: {} (missing magic number)", wasm_path.display())
             ));
         }
