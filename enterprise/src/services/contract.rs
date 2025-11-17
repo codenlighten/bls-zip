@@ -6,6 +6,8 @@
 use crate::error::{EnterpriseError, Result};
 use crate::models::*;
 use crate::blockchain::BlockchainClient;
+use crate::transaction::deployment::{DeployerKey, DeploymentBuilder};
+use crate::wasm_loader::WasmLoader;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -357,44 +359,74 @@ impl ContractService {
         .await?;
 
         // Deploy to blockchain (real or mock depending on configuration)
-        if let Some(_client) = &self.blockchain_client {
+        if let Some(client) = &self.blockchain_client {
             // Real blockchain deployment
             tracing::info!(
                 "Deploying contract {} to blockchain using real Boundless node",
                 contract_id
             );
 
-            // NOTE: This requires transaction building and key management infrastructure
-            // TODO: Implement complete deployment flow:
-            // 1. Load deployer wallet/key from secure storage
-            // 2. Get UTXOs for deployer address
-            // 3. Build transaction with WASM bytecode in data field
-            // 4. Sign transaction with deployer key
-            // 5. Submit via blockchain client
-            // 6. Poll for confirmation
-            // 7. Extract contract address from transaction receipt
-
-            // For now, log the limitation and use supervised mock mode
-            tracing::warn!(
-                "Contract deployment requires transaction building and key management. \
-                This will be completed in the next implementation phase. \
-                Marking contract as 'Pending' - admin must deploy manually via blockchain node."
-            );
-
-            // Keep contract in Pending status - manual deployment required
+            // Update status to Deploying
             sqlx::query!(
                 r#"
                 UPDATE contracts
                 SET status = $1
                 WHERE contract_id = $2
                 "#,
-                ContractStatus::Pending as ContractStatus,
+                ContractStatus::Deploying as ContractStatus,
                 contract_id,
             )
             .execute(&self.pool)
             .await?;
 
-            Ok(contract)
+            // Load deployer key from environment
+            let deployer_key = DeployerKey::from_env().map_err(|e| {
+                tracing::error!("Failed to load deployer key: {}", e);
+                e
+            })?;
+
+            // Create deployment builder
+            let deployment_builder = DeploymentBuilder::new(client.clone());
+
+            // Deploy contract (includes: UTXO query, tx building, signing, submission, polling)
+            match deployment_builder.deploy_contract(&deployer_key, wasm_bytes).await {
+                Ok(contract_address) => {
+                    tracing::info!(
+                        "Contract {} deployed successfully at address {}",
+                        contract_id,
+                        contract_address
+                    );
+
+                    // Mark as deployed with real contract address
+                    self.mark_deployed(
+                        contract_id,
+                        contract_address.clone(),
+                        contract_address, // tx_hash = contract_address in our scheme
+                        0, // gas_used tracking not yet implemented
+                    ).await?;
+
+                    // Fetch updated contract
+                    self.get_contract(contract_id).await
+                }
+                Err(e) => {
+                    tracing::error!("Contract {} deployment failed: {}", contract_id, e);
+
+                    // Mark as failed
+                    sqlx::query!(
+                        r#"
+                        UPDATE contracts
+                        SET status = $1
+                        WHERE contract_id = $2
+                        "#,
+                        ContractStatus::Failed as ContractStatus,
+                        contract_id,
+                    )
+                    .execute(&self.pool)
+                    .await?;
+
+                    Err(e)
+                }
+            }
         } else {
             // Mock mode for development/testing
             tracing::warn!(
@@ -742,8 +774,6 @@ impl ContractService {
 
     /// Get WASM bytecode for template
     fn get_template_wasm(&self, template_type: &ContractTemplateType) -> Result<Vec<u8>> {
-        // In production, this would load from contracts/templates/
-        // For now, return mock WASM
         let template_name = match template_type {
             ContractTemplateType::IdentityAccessControl => "identity_access_control",
             ContractTemplateType::MultisigWallet => "multisig_wallet",
@@ -752,9 +782,9 @@ impl ContractService {
             ContractTemplateType::Custom => "custom",
         };
 
-        // TODO: Load actual WASM file
-        // For now, return mock bytes
-        Ok(format!("WASM:{}", template_name).into_bytes())
+        // Load WASM bytecode using WasmLoader
+        let wasm_loader = WasmLoader::from_env();
+        wasm_loader.load_template(template_name)
     }
 
     /// Calculate WASM hash

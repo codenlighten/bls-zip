@@ -267,7 +267,79 @@ impl DeploymentBuilder {
         Ok(tx_hash)
     }
 
-    /// Build, sign, and submit a contract deployment transaction (all-in-one)
+    /// Poll for transaction confirmation
+    ///
+    /// Polls blockchain for transaction receipt with 2-second intervals
+    /// Returns contract address (derived from transaction hash)
+    pub async fn poll_for_confirmation(&self, tx_hash: &str, max_attempts: u32) -> Result<String> {
+        use tokio::time::{sleep, Duration};
+
+        const POLL_INTERVAL: Duration = Duration::from_secs(2);
+
+        tracing::info!(
+            "Polling for transaction {} confirmation (max {} attempts)",
+            tx_hash,
+            max_attempts
+        );
+
+        for attempt in 1..=max_attempts {
+            match self.blockchain_client.get_transaction(tx_hash).await {
+                Ok(Some(tx_info)) => {
+                    if tx_info.block_height.is_some() {
+                        let block_height = tx_info.block_height.unwrap();
+                        tracing::info!(
+                            "Transaction {} confirmed at block height {}",
+                            tx_hash,
+                            block_height
+                        );
+
+                        // Contract address is derived from transaction hash
+                        // This matches the blockchain's contract address derivation
+                        return Ok(tx_hash.to_string());
+                    } else {
+                        tracing::info!(
+                            "Transaction {} still pending (attempt {}/{})",
+                            tx_hash,
+                            attempt,
+                            max_attempts
+                        );
+                    }
+                }
+                Ok(None) => {
+                    tracing::warn!(
+                        "Transaction {} not found yet (attempt {}/{})",
+                        tx_hash,
+                        attempt,
+                        max_attempts
+                    );
+                }
+                Err(e) => {
+                    tracing::error!(
+                        "Error querying transaction {} (attempt {}/{}): {}",
+                        tx_hash,
+                        attempt,
+                        max_attempts,
+                        e
+                    );
+                }
+            }
+
+            if attempt < max_attempts {
+                sleep(POLL_INTERVAL).await;
+            }
+        }
+
+        Err(EnterpriseError::BlockchainError(format!(
+            "Transaction {} not confirmed after {} attempts ({} seconds)",
+            tx_hash,
+            max_attempts,
+            max_attempts * 2
+        )))
+    }
+
+    /// Build, sign, submit, and confirm a contract deployment transaction (all-in-one)
+    ///
+    /// Returns the contract address (transaction hash) after confirmation
     pub async fn deploy_contract(
         &self,
         deployer: &DeployerKey,
@@ -303,7 +375,15 @@ impl DeploymentBuilder {
 
         tracing::info!("Contract deployment transaction submitted: {}", tx_hash);
 
-        Ok(tx_hash)
+        // Step 6: Poll for confirmation (30 attempts = 60 seconds max)
+        let contract_address = self.poll_for_confirmation(&tx_hash, 30).await?;
+
+        tracing::info!(
+            "Contract deployment confirmed! Contract address: {}",
+            contract_address
+        );
+
+        Ok(contract_address)
     }
 }
 
