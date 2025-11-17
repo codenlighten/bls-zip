@@ -5,10 +5,12 @@
 
 use crate::error::{EnterpriseError, Result};
 use crate::models::*;
+use crate::blockchain::BlockchainClient;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Contract deployment status
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
@@ -118,11 +120,22 @@ pub struct TemplateParameter {
 /// Contract Service
 pub struct ContractService {
     pool: PgPool,
+    blockchain_client: Option<Arc<BlockchainClient>>,
 }
 
 impl ContractService {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    /// Create a new contract service
+    ///
+    /// If blockchain_client is None, the service will operate in MOCK MODE
+    /// and return simulated responses for development/testing.
+    pub fn new(pool: PgPool, blockchain_client: Option<Arc<BlockchainClient>>) -> Self {
+        if blockchain_client.is_none() {
+            tracing::warn!(
+                "ContractService initialized in MOCK MODE - contracts will not be deployed to blockchain. \
+                Set BOUNDLESS_HTTP_URL environment variable to enable real blockchain integration."
+            );
+        }
+        Self { pool, blockchain_client }
     }
 
     /// Get available contract templates
