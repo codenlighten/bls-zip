@@ -1,20 +1,33 @@
 # Boundless BLS Platform
 
+> **Manage. Monetize. Innovate. Boundlessly.**
+>
 > A post-quantum secure blockchain platform with Enterprise E² Multipass operating system
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)
 ![PQC](https://img.shields.io/badge/PQC-NIST%20Standards-green.svg)
 ![Enterprise](https://img.shields.io/badge/Enterprise-E²%20Multipass-purple.svg)
+![Boundless](https://img.shields.io/badge/Boundless-Trust-blue.svg)
 
 ## Overview
 
-**Boundless BLS** is a next-generation blockchain platform designed for the post-quantum era. It combines NIST-standardized post-quantum cryptographic algorithms with privacy-preserving smart contracts to deliver quantum-resistant security and confidential computation.
+**Boundless BLS** is a next-generation blockchain platform designed for the post-quantum era, developed by **Boundless Trust** in partnership with **SmartLedger Solutions**. We are committed to pioneering the future of decentralized technology, making it accessible, compliant, and secure for everyone.
 
-The platform consists of two major components:
+The platform combines NIST-standardized post-quantum cryptographic algorithms with privacy-preserving smart contracts to deliver quantum-resistant security and confidential computation, with a focus on **regulatory compliance**, **data sovereignty**, and **enterprise security**.
+
+### Platform Components
 
 1. **Boundless BLS Blockchain**: Core blockchain with post-quantum cryptography, SHA-3 PoW consensus, and WASM smart contracts
 2. **Enterprise E² Multipass**: Enterprise operating system providing identity management, multi-asset wallets, and business application integration
+
+### Core Values
+
+- **Transparent Ecosystem**: Open and auditable blockchain infrastructure
+- **Data Sovereignty**: Regional data compliance and user control
+- **Trust & Integrity**: Built on cryptographic guarantees and verifiable proofs
+- **Regulatory Compliance**: Designed for global standards and enterprise requirements
+- **Innovation**: Bridging complex technology with practical applications
 
 ### Key Features
 
@@ -59,20 +72,29 @@ The platform consists of two major components:
 - **PostgreSQL Backend**: 20+ tables with comprehensive schema (identities, wallets, assets, events)
 - **Next.js Frontend**: Modern admin UI with TypeScript and TailwindCSS
 
+#### Compliance & Governance Modules (In Development by Boundless Trust)
+- **GeoSovereign** (70% complete): Regional data compliance automation for multi-jurisdictional operations
+- **RegBlock** (65% complete): Real-time regulatory mandate integration and compliance monitoring
+- **ErasureGuard** (80% complete): GDPR "Right to Erasure" implementation with blockchain audit trails
+
 #### Future Features
-- **Multi-Chain Anchoring**: BSV, Ethereum, Cardano, Solana, Hedera
+- **Multi-Chain Anchoring**: Multi-blockchain support (BTC, ETH, SOL, BSV, ADA, HBAR)
+- **IoT Integration**: Internet of Things device connectivity and data verification
+- **Cross-Chain Verification**: Interoperability between multiple blockchain networks
+- **Energy-Efficient Mining**: ASIC-resistant mining with optimized energy consumption
 - **ATMOS Integration**: Environmental entropy for enhanced randomness
 
 ## Quick Start
 
 ### Prerequisites
 
-- Rust 1.75+ (`rustup`)
-- liboqs (Open Quantum Safe)
-- Node.js 20+ (for frontend)
-- cargo-contract (for smart contracts)
+- **Rust 1.75+** (`rustup`) - Core blockchain development
+- **liboqs** (Open Quantum Safe) - Post-quantum cryptography library
+- **Node.js 18+** (for frontend) - Enterprise E² Multipass UI
+- **PostgreSQL 14+** - Enterprise database (for E² Multipass)
+- **Docker + Docker Compose** - Containerized deployment (optional)
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed installation instructions.
+See [DEPLOYMENT.md](DEPLOYMENT.md) and [WINDOWS_SETUP_GUIDE.md](WINDOWS_SETUP_GUIDE.md) for detailed installation instructions.
 
 ### Build and Run
 
@@ -488,10 +510,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- **NIST**: Post-Quantum Cryptography Standardization
-- **Open Quantum Safe**: liboqs library
+### Organizations
+- **Boundless Trust**: Leading blockchain solutions provider
+- **SmartLedger Solutions**: Enterprise blockchain integration partner
+
+### Technology Partners
+- **NIST**: Post-Quantum Cryptography Standardization (FIPS 203, FIPS 204)
+- **Open Quantum Safe**: liboqs post-quantum cryptography library
 - **Parity Technologies**: ink! smart contract framework
-- **Bytecode Alliance**: Wasmtime runtime
+- **Bytecode Alliance**: Wasmtime WebAssembly runtime
+- **libp2p**: Modern peer-to-peer networking stack
+- **RocksDB**: High-performance embedded database
 
 ## Repository
 
@@ -499,14 +528,30 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Issues**: https://github.com/Saifullah62/BLS/issues
 - **Releases**: https://github.com/Saifullah62/BLS/releases
 
-## Contact
+## Contact & Community
 
+### Boundless Trust
+- **Website**: https://boundlesstrust.org
+- **Email**: contact@boundlesstrust.org
+- **LinkedIn**: https://linkedin.com/company/boundless-trust
+- **X/Twitter**: [@Boundless_Trust](https://x.com/Boundless_Trust)
+
+### SmartLedger Solutions (Partner)
 - **Enterprise Solutions**: yourfriends@smartledger.solutions
-- **Security**: security@boundless-bls.com
-- **Email**: info@boundless-bls.com
+
+### Security
+- **Security Contact**: security@boundlesstrust.org
+
+---
+
+## About Boundless Trust
+
+**Boundless Trust** (also known as Boundless Blockchain or BLS) is a blockchain solutions provider focused on decentralized technology that emphasizes regulatory compliance, data sovereignty, and security for enterprises and governments. Our vision is a world where blockchain technology drives innovation across industries, bridging complex technology with practical applications.
+
+In partnership with **SmartLedger Solutions**, we deliver enterprise-grade blockchain infrastructure with post-quantum security, making decentralized technology accessible, compliant, and secure for everyone.
 
 ---
 
 **Built for the post-quantum era** 🔐🚀
 
-*A collaboration between blockchain innovation and enterprise security*
+*Manage. Monetize. Innovate. Boundlessly.*
