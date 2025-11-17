@@ -98,7 +98,7 @@ async fn main() -> Result<()> {
         }
         Commands::Send { to, amount, key } => {
             let client = create_rpc_client(&cli.rpc_url)?;
-            tx::send_transaction(&client, &to, amount, &key).await?;
+            tx::send_transaction(&client, &cli.rpc_url, &to, amount, &key).await?;
         }
     }
 

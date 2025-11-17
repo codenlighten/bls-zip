@@ -4,13 +4,31 @@ use ed25519_dalek::{Signer, SigningKey};
 use jsonrpsee::core::client::ClientT;
 use jsonrpsee::http_client::HttpClient;
 use jsonrpsee::rpc_params;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha3::{Digest, Sha3_256};
 use std::fs;
 use std::path::Path;
 
+/// UTXO data from REST API
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct UtxoData {
+    pub tx_hash: String,
+    pub output_index: u32,
+    pub amount: u64,
+    pub block_height: u64,
+    pub script: Option<String>,
+}
+
+/// Response from /api/v1/utxos/:address
+#[derive(Debug, Deserialize)]
+struct UtxoListResponse {
+    pub utxos: Vec<UtxoData>,
+}
+
 pub async fn send_transaction(
     client: &HttpClient,
+    rpc_url: &str,
     to: &str,
     amount: u64,
     key_file: &Path,
@@ -57,42 +75,103 @@ pub async fn send_transaction(
         .try_into()
         .map_err(|_| anyhow::anyhow!("Failed to convert recipient address to array"))?;
 
-    // NOTE: This is a simplified implementation
-    // In production, you would:
-    // 1. Query chain_getBalance to check available funds
-    // 2. Query for UTXOs (requires additional RPC method)
-    // 3. Select appropriate UTXOs to spend
-    //
-    // For now, this creates a placeholder transaction structure
-    // that demonstrates the signing flow. Full UTXO handling requires
-    // additional RPC endpoints for UTXO enumeration.
+    // Query UTXOs from blockchain REST API
+    println!("  🔍 Querying UTXOs...");
+    let rest_url = rpc_url.replace(":9933", ":3001"); // Convert RPC port to REST port
+    let utxo_url = format!("{}/api/v1/utxos/{}", rest_url, hex::encode(sender_address));
 
-    println!(
-        "  ⚠️  Note: Simplified transaction creation (UTXO tracking not yet implemented in RPC)"
-    );
-    println!("  ⚠️  This will fail at submission without proper UTXOs");
+    let utxo_list: UtxoListResponse = ureq::get(&utxo_url)
+        .call()
+        .map_err(|e| anyhow::anyhow!("Failed to query UTXOs: {}", e))?
+        .into_json()
+        .map_err(|e| anyhow::anyhow!("Failed to parse UTXO response: {}", e))?;
 
-    // Create transaction output
-    let output = TxOutput {
+    if utxo_list.utxos.is_empty() {
+        bail!("No UTXOs available for this address. Address may have zero balance or no transactions.");
+    }
+
+    println!("  Found {} UTXOs", utxo_list.utxos.len());
+
+    // UTXO selection: Greedy algorithm - select smallest UTXOs until we have enough
+    // Estimate fee (simple: 1000 satoshis per input + 500 base fee)
+    let base_fee = 500u64;
+    let per_input_fee = 1000u64;
+
+    let mut selected_utxos = Vec::new();
+    let mut total_input = 0u64;
+    let mut sorted_utxos = utxo_list.utxos.clone();
+    sorted_utxos.sort_by_key(|u| u.amount); // Sort by amount (smallest first)
+
+    for utxo in sorted_utxos {
+        selected_utxos.push(utxo.clone());
+        total_input += utxo.amount;
+
+        let estimated_fee = base_fee + (selected_utxos.len() as u64 * per_input_fee);
+        let required = amount + estimated_fee;
+
+        if total_input >= required {
+            break;
+        }
+    }
+
+    let final_fee = base_fee + (selected_utxos.len() as u64 * per_input_fee);
+    let required_total = amount + final_fee;
+
+    if total_input < required_total {
+        bail!(
+            "Insufficient funds: have {} satoshis, need {} (amount: {}, fee: {})",
+            total_input,
+            required_total,
+            amount,
+            final_fee
+        );
+    }
+
+    println!("  Selected {} UTXOs (total: {} satoshis)", selected_utxos.len(), total_input);
+    println!("  Fee: {} satoshis", final_fee);
+
+    // Create transaction outputs
+    let mut outputs = vec![TxOutput {
         amount,
         recipient_pubkey_hash: recipient_address,
         script: None,
-    };
+    }];
 
-    // Create a placeholder input (in production, this would reference actual UTXOs)
-    let placeholder_input = TxInput {
-        previous_output_hash: [0u8; 32], // Would be actual UTXO tx hash
-        output_index: 0,
-        signature: Signature::Classical(vec![]), // Filled after signing
-        public_key: public_key.clone(),
-        nonce: None,
-    };
+    // Add change output if needed
+    let change = total_input - required_total;
+    if change > 0 {
+        println!("  Change: {} satoshis", change);
+        outputs.push(TxOutput {
+            amount: change,
+            recipient_pubkey_hash: sender_address,
+            script: None,
+        });
+    }
+
+    // Create transaction inputs from selected UTXOs
+    let mut tx_inputs = Vec::new();
+    for utxo in &selected_utxos {
+        let tx_hash_bytes = hex::decode(&utxo.tx_hash)?;
+        if tx_hash_bytes.len() != 32 {
+            bail!("Invalid UTXO tx_hash length: {}", tx_hash_bytes.len());
+        }
+        let mut tx_hash_array = [0u8; 32];
+        tx_hash_array.copy_from_slice(&tx_hash_bytes);
+
+        tx_inputs.push(TxInput {
+            previous_output_hash: tx_hash_array,
+            output_index: utxo.output_index,
+            signature: Signature::Classical(vec![]), // Will be filled after signing
+            public_key: public_key.clone(),
+            nonce: None,
+        });
+    }
 
     // Create unsigned transaction
     let mut tx = Transaction::new(
         1, // version
-        vec![placeholder_input],
-        vec![output],
+        tx_inputs,
+        outputs,
         chrono::Utc::now().timestamp() as u64,
         None,
     );
@@ -101,12 +180,17 @@ pub async fn send_transaction(
     println!("  🔐 Signing transaction...");
     let signing_hash = tx.signing_hash();
     let signature = signing_key.sign(&signing_hash);
+    let signature_bytes = signature.to_bytes().to_vec();
 
-    // Update transaction with signature
-    tx.inputs[0].signature = Signature::Classical(signature.to_bytes().to_vec());
+    // Update all inputs with the same signature (single-sig)
+    for input in &mut tx.inputs {
+        input.signature = Signature::Classical(signature_bytes.clone());
+    }
 
     println!("  📦 Transaction created:");
     println!("     TX Hash: {}", hex::encode(tx.hash()));
+    println!("     Inputs: {}", tx.inputs.len());
+    println!("     Outputs: {}", tx.outputs.len());
     println!("     Size: {} bytes", tx.size_bytes());
 
     // Serialize transaction
