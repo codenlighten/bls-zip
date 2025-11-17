@@ -7,6 +7,7 @@ pub mod application;
 pub mod asset;
 pub mod events;
 pub mod hardware;
+pub mod contract;
 
 pub use identity::IdentityService;
 pub use wallet::WalletService;
@@ -15,3 +16,4 @@ pub use application::ApplicationService;
 pub use asset::AssetService;
 pub use events::EventService;
 pub use hardware::HardwareService;
+pub use contract::ContractService;

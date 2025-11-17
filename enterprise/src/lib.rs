@@ -55,6 +55,7 @@ pub struct EnterpriseMultipass {
     pub asset_service: Arc<RwLock<services::AssetService>>,
     pub event_service: Arc<RwLock<services::EventService>>,
     pub hardware_service: Arc<RwLock<services::HardwareService>>,
+    pub contract_service: Arc<RwLock<services::ContractService>>,
 
     // Security services
     pub rate_limiter: Arc<RateLimiter>,
@@ -87,6 +88,7 @@ impl EnterpriseMultipass {
         )));
         let event_service = Arc::new(RwLock::new(services::EventService::new(pool.clone())));
         let hardware_service = Arc::new(RwLock::new(services::HardwareService::new(pool.clone())));
+        let contract_service = Arc::new(RwLock::new(services::ContractService::new(pool.clone())));
 
         // Initialize security services
         let rate_limiter = Arc::new(RateLimiter::new());
@@ -104,6 +106,7 @@ impl EnterpriseMultipass {
             asset_service,
             event_service,
             hardware_service,
+            contract_service,
             rate_limiter,
             audit_logger,
         })
@@ -121,6 +124,7 @@ impl EnterpriseMultipass {
             self.asset_service.clone(),
             self.event_service.clone(),
             self.hardware_service.clone(),
+            self.contract_service.clone(),
             self.rate_limiter.clone(),
         ).await
     }
