@@ -20,6 +20,12 @@ pub enum TransactionType {
 
     /// Asset registration/creation
     AssetRegister,
+
+    /// Smart contract deployment
+    ContractDeployment,
+
+    /// Smart contract method call
+    ContractCall,
 }
 
 impl TransactionType {
@@ -30,6 +36,8 @@ impl TransactionType {
             TransactionType::ProofAnchor => 1,
             TransactionType::AssetTransfer => 2,
             TransactionType::AssetRegister => 3,
+            TransactionType::ContractDeployment => 4,
+            TransactionType::ContractCall => 5,
         }
     }
 
@@ -40,6 +48,8 @@ impl TransactionType {
             1 => Some(TransactionType::ProofAnchor),
             2 => Some(TransactionType::AssetTransfer),
             3 => Some(TransactionType::AssetRegister),
+            4 => Some(TransactionType::ContractDeployment),
+            5 => Some(TransactionType::ContractCall),
             _ => None,
         }
     }
@@ -248,6 +258,151 @@ impl AssetRegisterData {
     }
 }
 
+/// Smart contract deployment transaction data
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ContractDeploymentData {
+    /// Deployer address
+    pub deployer: [u8; 32],
+
+    /// Initial contract state (optional)
+    pub initial_state: Vec<u8>,
+
+    /// Contract metadata (name, version, ABI, etc.)
+    pub metadata: Vec<u8>,
+}
+
+impl ContractDeploymentData {
+    /// Create new contract deployment data
+    pub fn new(deployer: [u8; 32], initial_state: Vec<u8>, metadata: Vec<u8>) -> Self {
+        Self {
+            deployer,
+            initial_state,
+            metadata,
+        }
+    }
+
+    /// Encode to bytes
+    pub fn encode(&self) -> Vec<u8> {
+        bincode::serialize(self).unwrap_or_default()
+    }
+
+    /// Decode from bytes
+    pub fn decode(data: &[u8]) -> Result<Self, String> {
+        bincode::deserialize(data)
+            .map_err(|e| format!("Failed to decode contract deployment: {}", e))
+    }
+
+    /// Validate contract deployment data
+    pub fn validate(&self) -> Result<(), String> {
+        if self.metadata.len() > 2048 {
+            return Err("Metadata exceeds 2048 bytes".to_string());
+        }
+
+        if self.initial_state.len() > 4096 {
+            return Err("Initial state exceeds 4096 bytes".to_string());
+        }
+
+        Ok(())
+    }
+}
+
+/// Smart contract call transaction data
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ContractCallData {
+    /// Target contract address
+    pub contract_address: [u8; 32],
+
+    /// Function name to call
+    pub function_name: String,
+
+    /// Raw arguments (serialized based on contract ABI)
+    pub args: Vec<u8>,
+
+    /// Caller address
+    pub caller: [u8; 32],
+}
+
+impl ContractCallData {
+    /// Create new contract call data
+    pub fn new(
+        contract_address: [u8; 32],
+        function_name: String,
+        args: Vec<u8>,
+        caller: [u8; 32],
+    ) -> Self {
+        Self {
+            contract_address,
+            function_name,
+            args,
+            caller,
+        }
+    }
+
+    /// Encode to bytes
+    pub fn encode(&self) -> Vec<u8> {
+        bincode::serialize(self).unwrap_or_default()
+    }
+
+    /// Decode from bytes
+    pub fn decode(data: &[u8]) -> Result<Self, String> {
+        bincode::deserialize(data).map_err(|e| format!("Failed to decode contract call: {}", e))
+    }
+
+    /// Validate contract call data
+    pub fn validate(&self) -> Result<(), String> {
+        if self.function_name.is_empty() {
+            return Err("Function name cannot be empty".to_string());
+        }
+
+        if self.function_name.len() > 256 {
+            return Err("Function name exceeds 256 characters".to_string());
+        }
+
+        if self.args.len() > 8192 {
+            return Err("Arguments exceed 8192 bytes".to_string());
+        }
+
+        Ok(())
+    }
+
+    /// Encode call data for WASM runtime (function_name_len + function_name + args)
+    pub fn encode_for_wasm(&self) -> Vec<u8> {
+        let mut encoded = Vec::new();
+
+        // Add function name length (2 bytes, little-endian)
+        let name_bytes = self.function_name.as_bytes();
+        let name_len = name_bytes.len() as u16;
+        encoded.extend_from_slice(&name_len.to_le_bytes());
+
+        // Add function name
+        encoded.extend_from_slice(name_bytes);
+
+        // Add arguments
+        encoded.extend_from_slice(&self.args);
+
+        encoded
+    }
+
+    /// Decode WASM call data
+    pub fn decode_from_wasm(data: &[u8]) -> Result<(String, Vec<u8>), String> {
+        if data.len() < 2 {
+            return Err("Call data too short".to_string());
+        }
+
+        let name_len = u16::from_le_bytes([data[0], data[1]]) as usize;
+        if data.len() < 2 + name_len {
+            return Err("Invalid function name length".to_string());
+        }
+
+        let function_name = String::from_utf8(data[2..2 + name_len].to_vec())
+            .map_err(|e| format!("Invalid UTF-8 in function name: {}", e))?;
+
+        let args = data[2 + name_len..].to_vec();
+
+        Ok((function_name, args))
+    }
+}
+
 /// Helper functions for creating special transaction types
 pub struct TransactionBuilder;
 
@@ -390,6 +545,40 @@ impl TransactionBuilder {
         }
 
         Err("No asset registration data in transaction".to_string())
+    }
+
+    /// Extract contract deployment data from transaction
+    pub fn extract_contract_deployment(
+        tx: &Transaction,
+    ) -> Result<ContractDeploymentData, String> {
+        let tx_type = Self::get_transaction_type(tx);
+        if tx_type != TransactionType::ContractDeployment {
+            return Err("Not a contract deployment transaction".to_string());
+        }
+
+        if let Some(ref data) = tx.data {
+            if data.len() > 1 {
+                return ContractDeploymentData::decode(&data[1..]);
+            }
+        }
+
+        Err("No contract deployment data in transaction".to_string())
+    }
+
+    /// Extract contract call data from transaction
+    pub fn extract_contract_call(tx: &Transaction) -> Result<ContractCallData, String> {
+        let tx_type = Self::get_transaction_type(tx);
+        if tx_type != TransactionType::ContractCall {
+            return Err("Not a contract call transaction".to_string());
+        }
+
+        if let Some(ref data) = tx.data {
+            if data.len() > 1 {
+                return ContractCallData::decode(&data[1..]);
+            }
+        }
+
+        Err("No contract call data in transaction".to_string())
     }
 }
 

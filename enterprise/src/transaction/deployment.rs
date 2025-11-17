@@ -385,6 +385,51 @@ impl DeploymentBuilder {
 
         Ok(contract_address)
     }
+
+    /// Send a contract interaction transaction
+    ///
+    /// Similar to deploy_contract, but for calling existing contracts
+    /// Returns the transaction hash after submission
+    pub async fn send_contract_call(
+        &self,
+        _contract_address: &str,
+        call_data: &[u8],
+        deployer: &DeployerKey,
+    ) -> Result<String> {
+        tracing::info!(
+            "Sending contract call ({} bytes call data)",
+            call_data.len()
+        );
+
+        // For now, treat contract calls like deployments (putting call data in script)
+        // A full implementation would have a dedicated contract call transaction type
+
+        // Step 1: Query UTXOs
+        let utxos = self.query_utxos(&deployer.address).await?;
+
+        // Step 2: Select UTXOs (call itself costs 0, but we need to pay fees)
+        let call_cost = 0u64; // Contract calls have no value transfer
+        let (selected_utxos, total_input, fee) = self.select_utxos(&utxos, call_cost)?;
+
+        // Step 3: Build transaction (using deployment builder with call data as WASM)
+        let unsigned_tx = self.build_deployment_transaction(
+            deployer,
+            &selected_utxos,
+            total_input,
+            fee,
+            call_data.to_vec(),
+        )?;
+
+        // Step 4: Sign transaction
+        let signed_tx = self.sign_transaction(unsigned_tx, deployer)?;
+
+        // Step 5: Submit to blockchain
+        let tx_hash = self.submit_transaction(&signed_tx).await?;
+
+        tracing::info!("Contract call transaction submitted: {}", tx_hash);
+
+        Ok(tx_hash)
+    }
 }
 
 #[cfg(test)]

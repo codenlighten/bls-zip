@@ -151,6 +151,28 @@ pub trait BlockchainRpc: Send + Sync {
 
     /// Get UTXOs (unspent transaction outputs) for an address
     fn get_utxos(&self, address: &[u8; 32]) -> Vec<crate::types::UtxoData>;
+
+    // ========================================================================
+    // Contract Query Methods (Phase 4)
+    // ========================================================================
+
+    /// Get contract info by address
+    fn get_contract(&self, address: &[u8; 32]) -> Option<boundless_core::ContractInfo>;
+
+    /// Get contract state by address
+    fn get_contract_state(&self, address: &[u8; 32]) -> Option<boundless_core::ContractState>;
+
+    /// Query contract (read-only WASM execution)
+    ///
+    /// Executes a contract function without modifying state
+    /// Returns the raw bytes returned by the WASM function
+    fn query_contract(
+        &self,
+        contract_address: &[u8; 32],
+        function_name: &str,
+        args: &[u8],
+        caller: &[u8; 32],
+    ) -> Result<Vec<u8>, String>;
 }
 
 /// RPC server
@@ -519,6 +541,24 @@ mod tests {
 
         fn get_utxos(&self, _address: &[u8; 32]) -> Vec<crate::types::UtxoData> {
             vec![]
+        }
+
+        fn get_contract(&self, _address: &[u8; 32]) -> Option<boundless_core::ContractInfo> {
+            None
+        }
+
+        fn get_contract_state(&self, _address: &[u8; 32]) -> Option<boundless_core::ContractState> {
+            None
+        }
+
+        fn query_contract(
+            &self,
+            _contract_address: &[u8; 32],
+            _function_name: &str,
+            _args: &[u8],
+            _caller: &[u8; 32],
+        ) -> Result<Vec<u8>, String> {
+            Err("Mock implementation".to_string())
         }
     }
 

@@ -26,6 +26,7 @@ pub mod crypto;  // Real PQC cryptography (Dilithium + Kyber)
 pub mod keystore;  // Encrypted private key storage
 pub mod transaction;  // Transaction building and signing
 pub mod wasm_loader;  // WASM bytecode loading for contract deployment
+pub mod abi;  // Contract ABI encoding/decoding
 
 // Re-export commonly used items
 pub use error::{EnterpriseError, Result};

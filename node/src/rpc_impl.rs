@@ -104,4 +104,34 @@ impl BlockchainRpc for Blockchain {
             })
             .collect()
     }
+
+    // ========================================================================
+    // Contract Query Methods (Phase 4)
+    // ========================================================================
+
+    fn get_contract(&self, address: &[u8; 32]) -> Option<boundless_core::ContractInfo> {
+        self.state().get_contract(address).cloned()
+    }
+
+    fn get_contract_state(&self, address: &[u8; 32]) -> Option<boundless_core::ContractState> {
+        self.state().get_contract_state(address).cloned()
+    }
+
+    fn query_contract(
+        &self,
+        contract_address: &[u8; 32],
+        function_name: &str,
+        args: &[u8],
+        caller: &[u8; 32],
+    ) -> Result<Vec<u8>, String> {
+        // TODO: Implement WASM execution for read-only contract queries
+        // This requires:
+        // 1. Load contract WASM bytecode from blockchain state
+        // 2. Initialize WASM runtime with current blockchain context
+        // 3. Execute function with provided args
+        // 4. Return result bytes
+        //
+        // For now, return an error indicating this is not yet implemented
+        Err("Contract query execution not yet implemented - requires WASM runtime integration".to_string())
+    }
 }

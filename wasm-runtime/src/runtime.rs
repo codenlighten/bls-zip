@@ -21,6 +21,9 @@ pub struct ContractState {
     /// SECURITY FIX: Track total storage used (in bytes)
     pub storage_bytes_used: usize,
 
+    /// Storage changes made during this execution
+    pub storage_changes: Vec<crate::config::StorageChange>,
+
     /// Caller address (32 bytes)
     pub caller: [u8; 32],
 
@@ -39,6 +42,7 @@ impl ContractState {
         Self {
             storage: HashMap::new(),
             storage_bytes_used: 0,
+            storage_changes: Vec::new(),
             caller,
             block_height,
             timestamp,
@@ -248,10 +252,14 @@ impl WasmRuntime {
 
         let execution_time_us = start_time.elapsed().as_micros() as u64;
 
+        // Extract storage changes from contract state
+        let storage_changes = store.data().storage_changes.clone();
+
         Ok(ExecutionResult::success(
             result_data,
             fuel_consumed,
             execution_time_us,
+            storage_changes,
         ))
     }
 

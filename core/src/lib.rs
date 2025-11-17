@@ -6,6 +6,7 @@
 pub mod account;
 pub mod asset;
 pub mod block;
+pub mod contract;
 pub mod error;
 pub mod merkle;
 pub mod proof;
@@ -17,6 +18,7 @@ pub mod tx_types;
 pub use account::Account;
 pub use asset::{AssetBalance, AssetDefinition, AssetRegistry, AssetType};
 pub use block::{Block, BlockHeader};
+pub use contract::{ContractInfo, ContractState, StateChange, CONTRACT_DEPLOYMENT_MARKER};
 pub use error::CoreError;
 pub use merkle::MerkleTree;
 pub use proof::{ProofAnchor, ProofStorage, ProofType};
@@ -24,7 +26,8 @@ pub use state::{BlockchainState, OutPoint, StateError};
 pub use transaction::{Signature, Transaction, TxInput, TxOutput};
 pub use tx_index::{TransactionIndex, TransactionRecord, TransactionStatus};
 pub use tx_types::{
-    AssetRegisterData, AssetTransferData, ProofAnchorData, TransactionBuilder, TransactionType,
+    AssetRegisterData, AssetTransferData, ContractCallData, ContractDeploymentData,
+    ProofAnchorData, TransactionBuilder, TransactionType,
 };
 
 /// Version number for protocol changes

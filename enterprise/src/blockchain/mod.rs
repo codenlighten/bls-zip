@@ -478,6 +478,85 @@ impl BlockchainClient {
 
         Ok(response.status().is_success())
     }
+
+    /// Query a deployed contract (read-only call)
+    ///
+    /// Sends ABI-encoded call data to a contract and returns the raw response bytes
+    pub async fn query_contract(&self, contract_address: &str, call_data: &[u8]) -> Result<Vec<u8>> {
+        // Validate contract address
+        Self::validate_address(contract_address, "contract address")?;
+
+        let request = ContractQueryRequest {
+            contract_address: contract_address.to_string(),
+            call_data: hex::encode(call_data),
+        };
+
+        let response = self
+            .client
+            .post(format!("{}/api/v1/contract/query", self.http_url))
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| EnterpriseError::BlockchainError(format!("HTTP request failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(EnterpriseError::BlockchainError(format!(
+                "Contract query failed: {}",
+                error_text
+            )));
+        }
+
+        let query_response: ContractQueryResponse = response
+            .json()
+            .await
+            .map_err(|e| EnterpriseError::BlockchainError(format!("Failed to parse response: {}", e)))?;
+
+        // Decode hex response to bytes
+        hex::decode(&query_response.result)
+            .map_err(|e| EnterpriseError::BlockchainError(format!("Invalid hex in response: {}", e)))
+    }
+
+    /// Send a transaction to a deployed contract (state-changing call)
+    ///
+    /// Builds, signs, and submits a contract interaction transaction
+    pub async fn send_contract_transaction(
+        &self,
+        contract_address: &str,
+        call_data: &[u8],
+        deployer_key: &crate::transaction::deployment::DeployerKey,
+    ) -> Result<String> {
+        use crate::transaction::deployment::DeploymentBuilder;
+
+        // Validate contract address
+        Self::validate_address(contract_address, "contract address")?;
+
+        // Use deployment builder to create contract transaction
+        let deployment_builder = DeploymentBuilder::new(std::sync::Arc::new(self.clone()));
+
+        // Build and send contract interaction transaction
+        // NOTE: This is a simplified implementation that treats contract calls like deployments
+        // A full implementation would have a dedicated contract transaction type
+        deployment_builder
+            .send_contract_call(contract_address, call_data, deployer_key)
+            .await
+    }
+}
+
+// Clone implementation for Arc usage
+impl Clone for BlockchainClient {
+    fn clone(&self) -> Self {
+        Self {
+            http_url: self.http_url.clone(),
+            client: Client::builder()
+                .timeout(Duration::from_secs(30))
+                .build()
+                .expect("Failed to create HTTP client"),
+        }
+    }
 }
 
 // Request/Response types
@@ -600,6 +679,17 @@ pub struct ProofInfo {
     pub block_height: u64,
     pub timestamp: u64,
     pub metadata: serde_json::Value,
+}
+
+#[derive(Serialize)]
+struct ContractQueryRequest {
+    contract_address: String,
+    call_data: String,  // Hex-encoded
+}
+
+#[derive(Deserialize)]
+struct ContractQueryResponse {
+    result: String,  // Hex-encoded result bytes
 }
 
 #[cfg(test)]

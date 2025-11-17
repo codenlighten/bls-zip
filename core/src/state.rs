@@ -1,7 +1,10 @@
 // Blockchain state management with UTXO tracking
 use crate::{
-    asset::AssetRegistry, proof::ProofStorage, tx_index::TransactionIndex, Block, Transaction,
-    TxOutput,
+    asset::AssetRegistry,
+    contract::{ContractInfo, ContractState},
+    proof::ProofStorage,
+    tx_index::TransactionIndex,
+    Block, Transaction, TxOutput,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -54,6 +57,14 @@ pub struct BlockchainState {
 
     /// Transaction index (for history queries and E2 integration)
     tx_index: TransactionIndex,
+
+    /// Smart contract registry (immutable contract information)
+    /// Maps contract_address -> ContractInfo
+    contract_registry: HashMap<[u8; 32], ContractInfo>,
+
+    /// Smart contract states (mutable contract storage)
+    /// Maps contract_address -> ContractState
+    contract_states: HashMap<[u8; 32], ContractState>,
 }
 
 impl BlockchainState {
@@ -70,6 +81,8 @@ impl BlockchainState {
             proof_storage: ProofStorage::new(),
             asset_registry: AssetRegistry::new(),
             tx_index: TransactionIndex::new(),
+            contract_registry: HashMap::new(),
+            contract_states: HashMap::new(),
         }
     }
 
@@ -123,6 +136,26 @@ impl BlockchainState {
     /// Get mutable transaction index
     pub fn tx_index_mut(&mut self) -> &mut TransactionIndex {
         &mut self.tx_index
+    }
+
+    /// Get contract by address
+    pub fn get_contract(&self, address: &[u8; 32]) -> Option<&ContractInfo> {
+        self.contract_registry.get(address)
+    }
+
+    /// Get contract state by address
+    pub fn get_contract_state(&self, address: &[u8; 32]) -> Option<&ContractState> {
+        self.contract_states.get(address)
+    }
+
+    /// Get mutable contract state by address
+    pub fn get_contract_state_mut(&mut self, address: &[u8; 32]) -> Option<&mut ContractState> {
+        self.contract_states.get_mut(address)
+    }
+
+    /// Check if a contract exists
+    pub fn has_contract(&self, address: &[u8; 32]) -> bool {
+        self.contract_registry.contains_key(address)
     }
 
     /// Apply a block to the state
@@ -233,6 +266,12 @@ impl BlockchainState {
             }
             TransactionType::AssetRegister => {
                 return self.apply_asset_register_transaction(tx, block_height);
+            }
+            TransactionType::ContractDeployment => {
+                return self.apply_contract_deployment_transaction(tx, block_height);
+            }
+            TransactionType::ContractCall => {
+                return self.apply_contract_call_transaction(tx, block_height);
             }
             TransactionType::Standard => {
                 // Continue with standard UTXO processing
@@ -452,6 +491,136 @@ impl BlockchainState {
 
         // Fixed fee for asset registration
         Ok(100)
+    }
+
+    /// Apply a contract deployment transaction
+    fn apply_contract_deployment_transaction(
+        &mut self,
+        tx: &Transaction,
+        block_height: u64,
+    ) -> Result<u64, StateError> {
+        use crate::tx_types::TransactionBuilder;
+        use sha3::{Digest, Sha3_256};
+
+        // Extract deployment data
+        let deployment_data = TransactionBuilder::extract_contract_deployment(tx)
+            .map_err(|e| StateError::InvalidTransaction(e))?;
+
+        // Derive contract address from transaction hash (SHA3-256)
+        let tx_hash = tx.hash();
+        let mut hasher = Sha3_256::new();
+        hasher.update(&tx_hash);
+        let contract_address: [u8; 32] = hasher.finalize().into();
+
+        // Check if contract already exists
+        if self.has_contract(&contract_address) {
+            return Err(StateError::InvalidTransaction(format!(
+                "Contract already exists at address: {}",
+                hex::encode(contract_address)
+            )));
+        }
+
+        // Extract WASM bytecode from transaction output
+        // According to architecture: Contract deployment creates a special UTXO with WASM in script field
+        let wasm_bytecode = if !tx.outputs.is_empty() {
+            tx.outputs[0]
+                .script
+                .clone()
+                .ok_or_else(|| {
+                    StateError::InvalidTransaction(
+                        "Contract deployment output missing WASM bytecode in script field".to_string(),
+                    )
+                })?
+        } else {
+            return Err(StateError::InvalidTransaction(
+                "Contract deployment has no outputs".to_string(),
+            ));
+        };
+
+        // Verify output has CONTRACT_DEPLOYMENT_MARKER
+        if tx.outputs[0].recipient_pubkey_hash != crate::contract::CONTRACT_DEPLOYMENT_MARKER {
+            return Err(StateError::InvalidTransaction(
+                "Contract deployment output missing CONTRACT_DEPLOYMENT_MARKER".to_string(),
+            ));
+        }
+
+        // Create contract info
+        let contract_info = ContractInfo::new(
+            contract_address,
+            wasm_bytecode,
+            deployment_data.deployer,
+            block_height,
+            tx_hash,
+        );
+
+        // Validate WASM bytecode
+        contract_info.validate_bytecode().map_err(|e| {
+            StateError::InvalidTransaction(format!("WASM validation failed: {}", e))
+        })?;
+
+        // Create initial contract state
+        let mut contract_state = ContractState::new(contract_address);
+        contract_state.last_modified = block_height;
+
+        // If initial state is provided, apply it
+        if !deployment_data.initial_state.is_empty() {
+            // Deserialize initial state as Vec<StateChange>
+            let initial_changes: Vec<crate::contract::StateChange> =
+                bincode::deserialize(&deployment_data.initial_state).map_err(|e| {
+                    StateError::InvalidTransaction(format!("Invalid initial state: {}", e))
+                })?;
+
+            contract_state.apply_changes(&initial_changes).map_err(|e| {
+                StateError::InvalidTransaction(format!("Failed to apply initial state: {}", e))
+            })?;
+        }
+
+        // Register contract
+        self.contract_registry
+            .insert(contract_address, contract_info);
+        self.contract_states.insert(contract_address, contract_state);
+
+        // Fixed fee for contract deployment
+        Ok(1000) // Higher fee for deployment (10x standard)
+    }
+
+    /// Apply a contract call transaction
+    /// Note: This currently processes the transaction structure but doesn't execute WASM
+    /// WASM execution will be integrated in Phase 3
+    fn apply_contract_call_transaction(
+        &mut self,
+        tx: &Transaction,
+        block_height: u64,
+    ) -> Result<u64, StateError> {
+        use crate::tx_types::TransactionBuilder;
+
+        // Extract call data
+        let call_data = TransactionBuilder::extract_contract_call(tx)
+            .map_err(|e| StateError::InvalidTransaction(e))?;
+
+        // Verify contract exists
+        if !self.has_contract(&call_data.contract_address) {
+            return Err(StateError::InvalidTransaction(format!(
+                "Contract not found at address: {}",
+                hex::encode(call_data.contract_address)
+            )));
+        }
+
+        // Update last modified time
+        if let Some(state) = self.get_contract_state_mut(&call_data.contract_address) {
+            state.last_modified = block_height;
+        }
+
+        // TODO (Phase 3): Execute WASM contract with wasm-runtime
+        // For now, we just validate the transaction structure and update the last_modified time
+        // The actual execution will:
+        // 1. Load contract WASM bytecode from contract_registry
+        // 2. Call wasm_runtime::execute() with function_name and args
+        // 3. Apply returned StateChanges to contract_state
+        // 4. Validate storage quotas
+
+        // Fixed fee for contract call
+        Ok(500) // Higher than standard, lower than deployment
     }
 
     /// Rollback a block from the state (for reorgs)

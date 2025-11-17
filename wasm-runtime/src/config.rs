@@ -81,7 +81,30 @@ impl RuntimeConfig {
     }
 }
 
-/// Execution result with gas accounting
+/// State change record for contract storage
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StorageChange {
+    /// Storage key
+    pub key: Vec<u8>,
+
+    /// New value (None = deletion)
+    pub value: Option<Vec<u8>>,
+}
+
+impl StorageChange {
+    pub fn update(key: Vec<u8>, value: Vec<u8>) -> Self {
+        Self {
+            key,
+            value: Some(value),
+        }
+    }
+
+    pub fn delete(key: Vec<u8>) -> Self {
+        Self { key, value: None }
+    }
+}
+
+/// Execution result with gas accounting and state changes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionResult {
     /// Return value from the contract
@@ -98,16 +121,25 @@ pub struct ExecutionResult {
 
     /// Error message if execution failed
     pub error: Option<String>,
+
+    /// Storage changes made during execution
+    pub storage_changes: Vec<StorageChange>,
 }
 
 impl ExecutionResult {
-    pub fn success(return_value: Vec<u8>, fuel_consumed: u64, execution_time_us: u64) -> Self {
+    pub fn success(
+        return_value: Vec<u8>,
+        fuel_consumed: u64,
+        execution_time_us: u64,
+        storage_changes: Vec<StorageChange>,
+    ) -> Self {
         Self {
             return_value,
             fuel_consumed,
             execution_time_us,
             success: true,
             error: None,
+            storage_changes,
         }
     }
 
@@ -118,6 +150,7 @@ impl ExecutionResult {
             execution_time_us,
             success: false,
             error: Some(error),
+            storage_changes: Vec::new(),
         }
     }
 }

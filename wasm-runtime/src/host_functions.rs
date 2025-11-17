@@ -15,6 +15,10 @@ pub fn register_host_functions(linker: &mut Linker<ContractState>) -> Result<(),
         .func_wrap("env", "storage_set", host_storage_set)
         .map_err(|e| WasmError::InitializationError(e.to_string()))?;
 
+    linker
+        .func_wrap("env", "storage_remove", host_storage_remove)
+        .map_err(|e| WasmError::InitializationError(e.to_string()))?;
+
     // Cryptographic functions
     linker
         .func_wrap("env", "sha3_256", host_sha3_256)
@@ -159,10 +163,60 @@ fn host_storage_set(
     }
 
     // Store in state and update usage tracking
-    state.storage.insert(key_buf, value_buf);
+    state.storage.insert(key_buf.clone(), value_buf.clone());
     state.storage_bytes_used = new_total as usize;
 
+    // Track the storage change
+    state
+        .storage_changes
+        .push(crate::config::StorageChange::update(key_buf, value_buf));
+
     0 // Success
+}
+
+/// Storage remove: delete key-value pair
+/// Parameters: key_ptr, key_len
+/// Returns: 0 on success (key removed), 1 if key didn't exist, -1 on error
+fn host_storage_remove(
+    mut caller: Caller<'_, ContractState>,
+    key_ptr: i32,
+    key_len: i32,
+) -> i32 {
+    let memory = match caller.get_export("memory") {
+        Some(wasmtime::Extern::Memory(mem)) => mem,
+        _ => return -1,
+    };
+
+    if key_len < 0 {
+        return -1; // Invalid key length
+    }
+
+    // Read key
+    let mut key_buf = vec![0u8; key_len as usize];
+    if memory
+        .read(&caller, key_ptr as usize, &mut key_buf)
+        .is_err()
+    {
+        return -1;
+    }
+
+    // Remove from storage
+    let state = caller.data_mut();
+
+    if let Some(old_value) = state.storage.remove(&key_buf) {
+        // Update storage usage tracking
+        let size_reduction = key_len as usize + old_value.len();
+        state.storage_bytes_used = state.storage_bytes_used.saturating_sub(size_reduction);
+
+        // Track the deletion
+        state
+            .storage_changes
+            .push(crate::config::StorageChange::delete(key_buf));
+
+        0 // Success, key was removed
+    } else {
+        1 // Key didn't exist
+    }
 }
 
 /// SHA3-256 hash function

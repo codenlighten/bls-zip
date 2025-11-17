@@ -59,6 +59,10 @@ pub async fn start_http_bridge<B: BlockchainRpc + Clone + 'static>(
         .route("/api/v1/proof/anchor", post(anchor_proof))
         .route("/api/v1/proof/verify", post(verify_proof))
         .route("/api/v1/proof/:proof_id", get(get_proof))
+        // Contract endpoints (Phase 4)
+        .route("/api/v1/contract/query", post(query_contract))
+        .route("/api/v1/contract/:address", get(get_contract_info))
+        .route("/api/v1/contract/:address/state", get(get_contract_state))
         .with_state(state);
 
     let addr_parsed = addr.parse::<SocketAddr>()?;
@@ -603,6 +607,161 @@ async fn get_proof<B: BlockchainRpc + Clone>(
 }
 
 // ============================================================================
+// Contract Endpoints (Phase 4)
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+struct ContractQueryRequest {
+    /// Contract address (hex-encoded 32 bytes)
+    contract_address: String,
+    /// Function name to call
+    function_name: String,
+    /// Function arguments (hex-encoded)
+    args: String,
+    /// Caller address (hex-encoded 32 bytes, optional)
+    caller: Option<String>,
+}
+
+async fn query_contract<B: BlockchainRpc + Clone>(
+    State(state): State<HttpBridgeState<B>>,
+    Json(req): Json<ContractQueryRequest>,
+) -> Result<Json<ContractQueryResponse>, ApiError> {
+    // Validate and decode contract address
+    let contract_address_bytes = hex::decode(&req.contract_address)
+        .map_err(|_| ApiError::InvalidParams("Invalid contract address format".to_string()))?;
+
+    if contract_address_bytes.len() != 32 {
+        return Err(ApiError::InvalidParams(
+            "Contract address must be 32 bytes".to_string(),
+        ));
+    }
+
+    let mut contract_address = [0u8; 32];
+    contract_address.copy_from_slice(&contract_address_bytes);
+
+    // Decode function arguments
+    let args_bytes = hex::decode(&req.args)
+        .map_err(|_| ApiError::InvalidParams("Invalid args format".to_string()))?;
+
+    // Decode caller address (use zero address if not provided)
+    let caller = if let Some(caller_str) = req.caller {
+        let caller_bytes = hex::decode(&caller_str)
+            .map_err(|_| ApiError::InvalidParams("Invalid caller address format".to_string()))?;
+
+        if caller_bytes.len() != 32 {
+            return Err(ApiError::InvalidParams(
+                "Caller address must be 32 bytes".to_string(),
+            ));
+        }
+
+        let mut caller_array = [0u8; 32];
+        caller_array.copy_from_slice(&caller_bytes);
+        caller_array
+    } else {
+        [0u8; 32] // Default to zero address
+    };
+
+    // Execute contract query
+    let chain = state.blockchain.read().await;
+
+    match chain.query_contract(&contract_address, &req.function_name, &args_bytes, &caller) {
+        Ok(result) => Ok(Json(ContractQueryResponse {
+            result: hex::encode(result),
+            success: true,
+            error: None,
+        })),
+        Err(e) => Ok(Json(ContractQueryResponse {
+            result: String::new(),
+            success: false,
+            error: Some(e),
+        })),
+    }
+}
+
+async fn get_contract_info<B: BlockchainRpc + Clone>(
+    State(state): State<HttpBridgeState<B>>,
+    Path(address_str): Path<String>,
+) -> Result<Json<ContractInfoResponse>, ApiError> {
+    // Validate and decode contract address
+    let address_bytes = hex::decode(&address_str)
+        .map_err(|_| ApiError::InvalidAddress("Invalid contract address format".to_string()))?;
+
+    if address_bytes.len() != 32 {
+        return Err(ApiError::InvalidAddress(
+            "Contract address must be 32 bytes".to_string(),
+        ));
+    }
+
+    let mut address = [0u8; 32];
+    address.copy_from_slice(&address_bytes);
+
+    // Query contract info from blockchain
+    let chain = state.blockchain.read().await;
+
+    match chain.get_contract(&address) {
+        Some(contract) => Ok(Json(ContractInfoResponse {
+            contract_address: hex::encode(contract.contract_address),
+            wasm_bytecode_size: contract.wasm_bytecode.len(),
+            deployer: hex::encode(contract.deployer),
+            deployed_at_height: contract.deployed_at_height,
+            deployed_at_tx: hex::encode(contract.deployed_at_tx),
+        })),
+        None => Err(ApiError::NotImplemented(format!(
+            "Contract not found: {}",
+            address_str
+        ))),
+    }
+}
+
+async fn get_contract_state<B: BlockchainRpc + Clone>(
+    State(state): State<HttpBridgeState<B>>,
+    Path(address_str): Path<String>,
+) -> Result<Json<ContractStateResponse>, ApiError> {
+    // Validate and decode contract address
+    let address_bytes = hex::decode(&address_str)
+        .map_err(|_| ApiError::InvalidAddress("Invalid contract address format".to_string()))?;
+
+    if address_bytes.len() != 32 {
+        return Err(ApiError::InvalidAddress(
+            "Contract address must be 32 bytes".to_string(),
+        ));
+    }
+
+    let mut address = [0u8; 32];
+    address.copy_from_slice(&address_bytes);
+
+    // Query contract state from blockchain
+    let chain = state.blockchain.read().await;
+
+    match chain.get_contract_state(&address) {
+        Some(state) => {
+            // Convert storage HashMap to hex-encoded key-value pairs
+            let storage_entries: Vec<StorageEntry> = state
+                .storage
+                .iter()
+                .map(|(key, value)| StorageEntry {
+                    key: hex::encode(key),
+                    value: hex::encode(value),
+                })
+                .collect();
+
+            Ok(Json(ContractStateResponse {
+                address: hex::encode(state.address),
+                storage_quota: state.storage_quota,
+                storage_used: state.storage_used,
+                storage_entries,
+                usage_percentage: state.usage_percentage(),
+                last_modified: state.last_modified,
+            }))
+        }
+        None => Err(ApiError::NotImplemented(format!(
+            "Contract state not found: {}",
+            address_str
+        ))),
+    }
+}
+
+// ============================================================================
 // Response Types
 // ============================================================================
 
@@ -712,6 +871,45 @@ struct ProofResponse {
     block_height: u64,
     tx_hash: String,
     metadata: Option<serde_json::Value>,
+}
+
+// Contract response types (Phase 4)
+
+#[derive(Debug, Serialize)]
+struct ContractQueryResponse {
+    /// Hex-encoded result bytes
+    result: String,
+    /// Whether the query was successful
+    success: bool,
+    /// Error message if failed
+    error: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct ContractInfoResponse {
+    contract_address: String,
+    wasm_bytecode_size: usize,
+    deployer: String,
+    deployed_at_height: u64,
+    deployed_at_tx: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ContractStateResponse {
+    address: String,
+    storage_quota: u64,
+    storage_used: u64,
+    storage_entries: Vec<StorageEntry>,
+    usage_percentage: f64,
+    last_modified: u64,
+}
+
+#[derive(Debug, Serialize)]
+struct StorageEntry {
+    /// Hex-encoded key
+    key: String,
+    /// Hex-encoded value
+    value: String,
 }
 
 // ============================================================================

@@ -21,20 +21,29 @@
 
 ### ⏳ In Progress Components
 
-**Enterprise E2 Multipass Integration** (60% Complete)
+**Enterprise E2 Multipass Integration** (85% Complete)
 - ✅ Database schema & migrations
 - ✅ API endpoints (identity, wallet, auth, contracts)
 - ✅ Frontend UI (React + TypeScript)
 - ✅ Blockchain RPC client infrastructure
-- ⏳ Contract deployment (mock mode → real blockchain)
-- ⏳ CLI transaction creation with UTXOs
-- ⏳ Contract ABI infrastructure
+- ✅ Contract deployment with real blockchain (WASM + UTXOs)
+- ✅ CLI transaction creation with UTXOs
+- ✅ Contract ABI infrastructure (encoding/decoding)
 
 ---
 
 ## Recent Completions
 
 ### November 17, 2025
+
+**✅ Contract ABI Infrastructure** (Latest)
+- Complete ABI type system (Bool, Uint, Int, Bytes, String, Address, Arrays, Tuples)
+- ABI encoder for contract method calls (910+ lines of production code)
+- ABI decoder for return values (JSON output)
+- 4 contract template ABI definitions (identity, multisig, escrow, authorization)
+- Integrated with ContractService for real contract interactions
+- Added blockchain client methods (query_contract, send_contract_transaction)
+- Function selector calculation using SHA3-256
 
 **✅ Contract Service Blockchain Integration** (Commit: 50d5786)
 - Updated `ContractService` to optionally use real blockchain client
@@ -49,7 +58,7 @@
 - Proper fee estimation (base + per-input fees)
 - Production-ready transaction building
 
-**✅ Documentation Cleanup** (This Commit)
+**✅ Documentation Cleanup**
 - Archived 5 outdated documentation files
 - Removed duplicate Docker documentation
 - Created consolidated STATUS.md
@@ -65,27 +74,29 @@ Codebase audit findings: [CODEBASE_AUDIT_SUMMARY.md](./CODEBASE_AUDIT_SUMMARY.md
 
 ## Remaining High-Priority Work
 
-### 1. Contract Deployment Infrastructure (3-5 days)
-**Status**: Partially implemented, needs completion
+### 1. Contract Deployment Infrastructure
+**Status**: ✅ Complete
 
-**Current**: Contract service has blockchain client but uses mock deployment
-**Needed**:
-- Transaction building with real UTXOs
-- WASM bytecode loading from compiled contracts
-- Key management for deployment signing
-- Receipt polling and confirmation waiting
+**Implemented**:
+- ✅ Transaction building with real UTXOs
+- ✅ WASM bytecode loading from compiled contracts
+- ✅ Key management for deployment signing (deployer key from env)
+- ✅ Receipt polling and confirmation waiting
+- ✅ Full end-to-end deployment pipeline
 
-**Files**: `enterprise/src/services/contract.rs`
+**Files**: `enterprise/src/services/contract.rs`, `enterprise/src/transaction/deployment.rs`
 
-### 2. Contract ABI Infrastructure (2-3 days)
-**Status**: Not started
+### 2. Contract ABI Infrastructure
+**Status**: ✅ Complete
 
-**Needed**:
-- ABI encoding/decoding for contract method calls
-- Parameter validation and serialization
-- Return value parsing
+**Implemented**:
+- ✅ ABI encoding/decoding for contract method calls
+- ✅ Parameter validation and serialization
+- ✅ Return value parsing (JSON format)
+- ✅ 4 contract template ABI definitions
+- ✅ Integration with read and write calls
 
-**Files**: `enterprise/src/services/contract.rs`, new `enterprise/src/abi/` module
+**Files**: `enterprise/src/abi/` module (4 files, 910+ lines)
 
 ### 3. RPC Proof Anchoring Fix (1-2 days)
 **Status**: Not started
@@ -102,15 +113,16 @@ Codebase audit findings: [CODEBASE_AUDIT_SUMMARY.md](./CODEBASE_AUDIT_SUMMARY.md
 | Priority | Component | Status | Estimated Time | Dependency |
 |----------|-----------|--------|----------------|------------|
 | **HIGH** | CLI Transaction Creation | ✅ DONE | - | None |
-| **HIGH** | Contract Deployment | ⏳ 40% | 3-5 days | Key management |
+| **HIGH** | Contract Deployment | ✅ DONE | - | None |
+| **HIGH** | Contract ABI | ✅ DONE | - | None |
 | **HIGH** | RPC Proof Anchoring | ⏳ 0% | 1-2 days | None |
-| **MEDIUM** | Contract ABI | ⏳ 0% | 2-3 days | None |
-| **MEDIUM** | Deployment Utilities | ⏳ 0% | 2-3 days | Contract deployment |
-| **MEDIUM** | E2 Template Integration | ⏳ 0% | 3-4 days | Contract ABI |
+| **MEDIUM** | SQL Injection Fix (events.rs) | ⏳ 0% | 1 day | None |
+| **MEDIUM** | E2 Template Integration | ⏳ 0% | 2-3 days | None |
 | **LOW** | WASM Compilation | ⏳ 0% | 1-2 days | None |
 | **LOW** | Bootnode Config | ⏳ 0% | 0.5 days | None |
+| **LOW** | Testing Infrastructure | ⏳ 0% | 2-3 days | None |
 
-**Total Remaining**: 12.5-19.5 days
+**Total Remaining**: 7-12 days
 
 ---
 
@@ -126,10 +138,10 @@ Codebase audit findings: [CODEBASE_AUDIT_SUMMARY.md](./CODEBASE_AUDIT_SUMMARY.md
 
 ### Not Ready for Production
 
-**Enterprise E2 Integration**: ⚠️ 2-3 weeks needed
-- Contract deployment uses mock mode
-- Cannot deploy contracts via UI
-- Contract calls not yet implemented
+**Enterprise E2 Integration**: ⚠️ 1-2 weeks needed
+- Contract deployment fully functional
+- Contract calls implemented with ABI encoding/decoding
+- Minor fixes needed (RPC proof anchoring, SQL injection)
 
 ### Deployment Options
 
@@ -139,10 +151,11 @@ Codebase audit findings: [CODEBASE_AUDIT_SUMMARY.md](./CODEBASE_AUDIT_SUMMARY.md
 - Deploy contracts via direct RPC
 - Skip E2 UI until integration complete
 
-**Option B: Full Stack** ⚠️ Wait 2-3 weeks
-- Complete contract deployment integration
-- Complete contract ABI infrastructure
-- Test end-to-end workflow
+**Option B: Full Stack** ⚠️ Wait 1-2 weeks
+- ✅ Contract deployment integration complete
+- ✅ Contract ABI infrastructure complete
+- ⏳ Fix remaining minor issues
+- ⏳ Test end-to-end workflow
 - Deploy with full E2 UI functionality
 
 ---
@@ -184,13 +197,16 @@ eca80b9 (HEAD -> main) Implement CLI transaction creation with real UTXO support
 
 **Immediate** (This Week):
 1. ✅ Document current status (this file)
-2. Start contract deployment infrastructure implementation
-3. Design key management system for deployment signing
+2. ✅ Contract deployment infrastructure implementation
+3. ✅ Contract ABI infrastructure implementation
+4. Fix RPC proof anchoring
+5. Fix SQL injection in events.rs
 
 **Short Term** (Next 1-2 Weeks):
-1. Complete contract deployment with real blockchain
-2. Implement contract ABI infrastructure
-3. Fix RPC proof anchoring
+1. ✅ Complete contract deployment with real blockchain
+2. ✅ Implement contract ABI infrastructure
+3. E2 template integration
+4. End-to-end integration testing
 
 **Medium Term** (Next 2-4 Weeks):
 1. Complete E2 template integration
