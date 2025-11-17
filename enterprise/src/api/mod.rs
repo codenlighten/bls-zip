@@ -71,7 +71,11 @@ pub async fn serve(
 
     tracing::info!("Enterprise Multipass API listening on {}", bind_addr);
 
-    axum::serve(listener, app).await
+    // Add ConnectInfo layer for rate limiting middleware to access client IP
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>()
+    ).await
         .map_err(|e| EnterpriseError::Internal(format!("Server error: {}", e)))?;
 
     Ok(())
