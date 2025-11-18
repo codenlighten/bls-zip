@@ -10,7 +10,7 @@
 
 ### ✅ Production Ready Components
 
-**Core Blockchain** (98% Complete)
+**Core Blockchain** (75% Complete - Critical Gaps Identified)
 - ✅ Consensus & Mining (PoW with DAA)
 - ✅ Post-Quantum Cryptography (ML-KEM-768, ML-DSA-44, Falcon-512)
 - ✅ WASM Smart Contracts (98% Complete - with fuel metering & security)
@@ -21,10 +21,10 @@
   - ✅ ABI Encoder with function name encoding
   - ✅ E2 Multipass contract templates verified compatible
   - ⏳ Documentation (90% complete)
-- ✅ P2P Networking (Kademlia DHT + mDNS)
+- ⚠️ P2P Networking (mDNS only - Kademlia DHT missing)
 - ✅ RPC API (JSON-RPC + REST endpoints)
 - ✅ Transaction Pool & Validation
-- ✅ Block Storage & State Management
+- ⚠️ Block Storage & State Management (O(N) UTXO lookup - DoS vulnerability)
 
 ### ⏳ In Progress Components
 
@@ -46,7 +46,20 @@
 
 ### November 18, 2025
 
-**✅ E2 Template Integration Analysis** (Latest)
+**⚠️ Critical Core Architecture Gaps Identified** (Latest)
+- Comprehensive audit revealed 7 critical blockchain infrastructure issues
+- **CRITICAL**: O(N) UTXO lookup (DoS vulnerability in core/src/state.rs)
+- **HIGH**: Missing Kademlia DHT (peer discovery limited to local network)
+- **HIGH**: Missing State Root (no light client support)
+- **HIGH**: Missing IBD orchestrator (new nodes cannot sync efficiently)
+- **MEDIUM**: Inefficient Merkle tree calculation
+- **MEDIUM**: No key rotation service (compliance gap)
+- **MEDIUM**: No HSM support (FIPS 140-2 Level 3 blocker)
+- Created detailed analysis and implementation plan (CORE_ARCHITECTURE_GAPS.md)
+- Estimated fix time: 3-4 weeks for all critical issues
+- **Immediate action required on DoS vulnerability**
+
+**✅ E2 Template Integration Analysis**
 - Documented 90% completion status
 - All UI/API/backend infrastructure complete
 - 4 smart contract templates fully defined (identity, multisig, escrow, authorization)
@@ -172,12 +185,19 @@
 | **HIGH** | Contract ABI | ✅ DONE | - | None |
 | **MEDIUM** | SQL Injection Fix (events.rs) | ✅ DONE | - | None |
 | **HIGH** | RPC Proof Anchoring | ✅ DONE | - | None |
-| **MEDIUM** | E2 Template Integration | ⏳ 0% | 2-3 days | None |
-| **LOW** | WASM Compilation | ⏳ 0% | 1-2 days | None |
+| **CRITICAL** | Fix O(N) UTXO Lookup (DoS) | ⏳ 0% | 1-2 days | None |
+| **HIGH** | Add Kademlia DHT | ⏳ 0% | 2-3 days | Bootstrap nodes |
+| **HIGH** | Implement IBD Orchestrator | ⏳ 0% | 5-7 days | P2P protocol |
+| **HIGH** | Add State Root | ⏳ 0% | 3-5 days | State refactoring |
+| **MEDIUM** | Optimize Merkle Tree | ⏳ 0% | 0.5 days | None |
+| **MEDIUM** | Key Rotation Service | ⏳ 0% | 2-3 days | Admin auth |
+| **MEDIUM** | HSM Support | ⏳ 0% | 5-7 days | HSM credentials |
+| **MEDIUM** | E2 Template Integration | ⏳ 90% | 2-3 days | WASM compilation |
+| **LOW** | WASM Compilation | ⏳ 0% | 1-2 days | Build environment |
 | **LOW** | Bootnode Config | ⏳ 0% | 0.5 days | None |
 | **LOW** | Testing Infrastructure | ⏳ 0% | 2-3 days | None |
 
-**Total Remaining**: 3-8 days
+**Total Remaining**: 24-40 days (3.5-6 weeks)
 
 ---
 
@@ -185,11 +205,14 @@
 
 ### Ready for Production
 
-**Blockchain Core**: ✅ Ready
-- Can deploy nodes and mine blocks
-- Can validate and process transactions
-- Smart contracts work via direct RPC
-- No security vulnerabilities found
+**Blockchain Core**: ❌ NOT READY (Critical Issues Found)
+- ✅ Can deploy nodes and mine blocks
+- ✅ Can validate and process transactions
+- ✅ Smart contracts work via direct RPC
+- ❌ **DoS vulnerability** (O(N) UTXO lookup)
+- ❌ **Peer discovery broken** (no Kademlia DHT)
+- ❌ **Sync inefficient** (no IBD orchestrator)
+- ❌ **No light clients** (missing State Root)
 
 ### Not Ready for Production
 
@@ -201,18 +224,19 @@
 
 ### Deployment Options
 
-**Option A: Blockchain Only** ✅ Deploy Now
-- Deploy blockchain nodes
-- Use CLI for transactions
-- Deploy contracts via direct RPC
-- Skip E2 UI until integration complete
+**Option A: Blockchain Only** ❌ NOT RECOMMENDED
+- ❌ DoS vulnerability (O(N) UTXO lookup)
+- ❌ Peer discovery limited to local network
+- ❌ New nodes cannot sync efficiently
+- ⚠️ Critical fixes required before any deployment
 
-**Option B: Full Stack** ⚠️ Wait 0.5-1 week
+**Option B: Full Stack** ⚠️ Wait 3-5 weeks
 - ✅ Contract deployment integration complete
 - ✅ Contract ABI infrastructure complete
-- ✅ Security fixes complete (SQL injection, RPC proof anchoring)
+- ✅ E2 security fixes complete (SQL injection, RPC proof anchoring)
+- ❌ Core blockchain critical issues (3-4 weeks to fix)
 - ⏳ E2 template integration (90% - WASM compilation pending)
-- ⏳ Test end-to-end workflow
+- ⏳ Test end-to-end workflow after core fixes
 - Deploy with full E2 UI functionality
 
 ---
@@ -234,12 +258,42 @@
 
 ## Known Issues
 
-### Windows Build Issue (CLI)
-**Component**: CLI (UTXO transaction creation)
+### 1. Core Blockchain DoS Vulnerability (CRITICAL)
+**Component**: Core UTXO State Management
+**Issue**: O(N) UTXO lookup in `core/src/state.rs:get_utxos()`
+**Impact**: Attackers can crash nodes by spamming dust transactions and querying balances
+**Fix**: Add address-to-UTXO index for O(1) lookup (1-2 days)
+**Status**: **BLOCKING PRODUCTION DEPLOYMENT**
+
+### 2. Missing Kademlia DHT (HIGH)
+**Component**: P2P Network Stack
+**Issue**: No Kademlia DHT in `p2p/src/network.rs`, only mDNS (local network)
+**Impact**: Nodes cannot discover peers beyond local network, requires manual bootnode configuration
+**Fix**: Integrate libp2p Kademlia (2-3 days)
+**Status**: **BLOCKING PUBLIC NETWORK**
+
+### 3. Missing State Root (HIGH)
+**Component**: Block Header Structure
+**Issue**: No State Root in `core/src/block.rs:BlockHeader`
+**Impact**: No light client support, no fast sync, cannot verify balances without full chain
+**Fix**: Add State Root field and Merkle Patricia Trie (3-5 days, requires hard fork)
+**Status**: **BLOCKING LIGHT CLIENTS**
+
+### 4. Missing IBD Orchestrator (HIGH)
+**Component**: Node Synchronization
+**Issue**: No Initial Block Download orchestrator in `node/src/blockchain.rs`
+**Impact**: New nodes cannot sync efficiently (10-20x slower than optimal)
+**Fix**: Implement headers-first sync with parallel downloads (5-7 days)
+**Status**: **BLOCKING EFFICIENT SYNC**
+
+### 5. Windows Build Issue (MEDIUM)
+**Component**: CLI + WASM Compilation
 **Issue**: cmake/Visual Studio compatibility error in `ring` crate dependency
 **Impact**: Code is correct but won't compile on Windows
 **Workaround**: Use WSL2, Linux VM, or Docker for building
 **Status**: Environmental issue, not code problem
+
+See [CORE_ARCHITECTURE_GAPS.md](./CORE_ARCHITECTURE_GAPS.md) for complete analysis.
 
 ---
 
@@ -260,26 +314,31 @@ eca80b9 Implement CLI transaction creation with real UTXO support
 
 ## Next Actions
 
-**Immediate** (This Week):
+**Immediate** (This Week - CRITICAL):
 1. ✅ Document current status (this file)
 2. ✅ Contract deployment infrastructure implementation
 3. ✅ Contract ABI infrastructure implementation
 4. ✅ Fix RPC proof anchoring
 5. ✅ Fix SQL injection in events.rs
-6. ⏳ E2 template integration (90% - blocked by WASM compilation)
-7. Set up WSL2/Linux/Docker for WASM compilation
+6. ⚠️ **URGENT: Fix O(N) UTXO lookup DoS vulnerability**
+7. ⚠️ **URGENT: Add Kademlia DHT for peer discovery**
 
-**Short Term** (Next 1-2 Weeks):
-1. ✅ Complete contract deployment with real blockchain
-2. ✅ Implement contract ABI infrastructure
-3. ⏳ Complete E2 template integration (compile WASM, update deployment)
-4. End-to-end integration testing
-5. Set up production build environment
+**Short Term** (Next 2-3 Weeks):
+1. ⚠️ Fix core blockchain DoS vulnerability (UTXO indexing)
+2. ⚠️ Add Kademlia DHT to P2P stack
+3. ⚠️ Implement IBD orchestrator for efficient sync
+4. ⚠️ Add State Root to block headers
+5. Optimize Merkle tree calculation
+6. Complete E2 template integration (compile WASM, update deployment)
 
-**Medium Term** (Next 2-4 Weeks):
-1. Complete E2 template integration
-2. End-to-end integration testing
-3. Performance optimization
+**Medium Term** (Next 4-6 Weeks):
+1. ✅ Core blockchain fixes complete
+2. ✅ Network infrastructure operational
+3. Key rotation service
+4. HSM support layer
+5. End-to-end integration testing
+6. Performance optimization
+7. Production deployment preparation
 
 ---
 
