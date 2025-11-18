@@ -306,7 +306,7 @@ mod tests {
         let db = Database::open(config).unwrap();
 
         // Create test block
-        let header = BlockHeader::new(1, [0u8; 32], [0u8; 32], 123456, 0x1f0fffff, 0, 1); // Added height
+        let header = BlockHeader::new(1, [0u8; 32], [0u8; 32], [0u8; 32], 123456, 0x1f0fffff, 0, 1); // Added height
         let tx = Transaction::new(
             1,
             vec![],

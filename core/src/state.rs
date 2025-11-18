@@ -904,7 +904,7 @@ mod tests {
         let coinbase_tx = Transaction::new(1, vec![], vec![coinbase_output], 1234567890, None);
 
         let block = Block::new(
-            BlockHeader::new(1, [0u8; 32], [0u8; 32], 1234567890, 0x1f0fffff, 0, 1),
+            BlockHeader::new(1, [0u8; 32], [0u8; 32], [0u8; 32], 1234567890, 0x1f0fffff, 0, 1),
             vec![coinbase_tx],
         );
 
@@ -932,7 +932,7 @@ mod tests {
         );
 
         let genesis = Block::new(
-            BlockHeader::new(1, [0u8; 32], [0u8; 32], 1234567890, 0x1f0fffff, 0, 1),
+            BlockHeader::new(1, [0u8; 32], [0u8; 32], [0u8; 32], 1234567890, 0x1f0fffff, 0, 1),
             vec![coinbase_tx.clone()],
         );
 

@@ -156,7 +156,7 @@ mod tests {
     fn test_validate_pow() {
         // Test that impossible difficulty fails validation
         let header = BlockHeader::new(
-            1, [0u8; 32], [0u8; 32], 1234567890,
+            1, [0u8; 32], [0u8; 32], [0u8; 32], 1234567890,
             0x01000001, // Very hard difficulty - should fail with nonce 0
             0, 1, // height
         );

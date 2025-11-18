@@ -18,6 +18,10 @@ pub struct BlockHeader {
     /// Merkle root of all transactions in the block
     pub merkle_root: [u8; 32],
 
+    /// State root (SHA3-256 hash of the blockchain state after applying this block)
+    /// Enables light clients to verify current state without full blockchain
+    pub state_root: [u8; 32],
+
     /// Block timestamp (Unix timestamp in seconds)
     pub timestamp: u64,
 
@@ -37,6 +41,7 @@ impl BlockHeader {
         version: u32,
         previous_hash: [u8; 32],
         merkle_root: [u8; 32],
+        state_root: [u8; 32],
         timestamp: u64,
         difficulty_target: u32,
         nonce: u64,
@@ -46,6 +51,7 @@ impl BlockHeader {
             version,
             previous_hash,
             merkle_root,
+            state_root,
             timestamp,
             difficulty_target,
             nonce,
@@ -61,6 +67,7 @@ impl BlockHeader {
         hasher.update(self.version.to_le_bytes());
         hasher.update(self.previous_hash);
         hasher.update(self.merkle_root);
+        hasher.update(self.state_root);
         hasher.update(self.timestamp.to_le_bytes());
         hasher.update(self.difficulty_target.to_le_bytes());
         hasher.update(self.nonce.to_le_bytes());
@@ -254,7 +261,7 @@ mod tests {
 
     #[test]
     fn test_block_header_hash() {
-        let header = BlockHeader::new(1, [0u8; 32], [0u8; 32], 1234567890, 0x1d00ffff, 0, 1);
+        let header = BlockHeader::new(1, [0u8; 32], [0u8; 32], [0u8; 32], 1234567890, 0x1d00ffff, 0, 1);
 
         let hash = header.hash();
         assert_eq!(hash.len(), 32);
@@ -278,7 +285,7 @@ mod tests {
     #[test]
     fn test_merkle_root_empty() {
         let block = Block::new(
-            BlockHeader::new(1, [0u8; 32], [0u8; 32], 0, 0, 0, 1),
+            BlockHeader::new(1, [0u8; 32], [0u8; 32], [0u8; 32], 0, 0, 0, 1),
             vec![],
         );
 
@@ -311,7 +318,7 @@ mod tests {
         );
 
         let block = Block::new(
-            BlockHeader::new(1, [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
+            BlockHeader::new(1, [0u8; 32], [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
             vec![tx; 10], // 10 transactions
         );
 
@@ -345,7 +352,7 @@ mod tests {
         );
 
         let block = Block::new(
-            BlockHeader::new(1, [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
+            BlockHeader::new(1, [0u8; 32], [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
             vec![large_tx],
         );
 
@@ -381,7 +388,7 @@ mod tests {
         );
 
         let block = Block::new(
-            BlockHeader::new(1, [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
+            BlockHeader::new(1, [0u8; 32], [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
             vec![tx],
         );
 
@@ -415,7 +422,7 @@ mod tests {
         );
 
         let block = Block::new(
-            BlockHeader::new(1, [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
+            BlockHeader::new(1, [0u8; 32], [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
             vec![tx; 100], // 100 transactions
         );
 
@@ -447,7 +454,7 @@ mod tests {
         );
 
         let block = Block::new(
-            BlockHeader::new(1, [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
+            BlockHeader::new(1, [0u8; 32], [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
             vec![tx; 10_001], // 10,001 transactions
         );
 
@@ -480,7 +487,7 @@ mod tests {
         );
 
         let block = Block::new(
-            BlockHeader::new(1, [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
+            BlockHeader::new(1, [0u8; 32], [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
             vec![tx; 10_000], // Exactly 10,000 transactions
         );
 
@@ -515,7 +522,7 @@ mod tests {
         );
 
         let oversized_block = Block::new(
-            BlockHeader::new(1, [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
+            BlockHeader::new(1, [0u8; 32], [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
             vec![large_tx],
         );
 
@@ -542,7 +549,7 @@ mod tests {
         );
 
         let too_many_tx_block = Block::new(
-            BlockHeader::new(1, [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
+            BlockHeader::new(1, [0u8; 32], [0u8; 32], [0u8; 32], 0, 0x1d00ffff, 0, 1),
             vec![tx; 10_001],
         );
 

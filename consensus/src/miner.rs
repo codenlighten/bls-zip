@@ -231,7 +231,7 @@ mod tests {
 
         // Create a block with very easy difficulty
         let header = BlockHeader::new(
-            1, [0u8; 32], [0u8; 32], 1234567890, 0x1f0fffff, // Very easy
+            1, [0u8; 32], [0u8; 32], [0u8; 32], 1234567890, 0x1f0fffff, // Very easy
             0, 1, // height
         );
 

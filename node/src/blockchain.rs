@@ -120,6 +120,7 @@ impl Blockchain {
             1,                  // version
             [0u8; 32],          // previous hash (none for genesis)
             coinbase_tx.hash(), // merkle root (single transaction)
+            [0u8; 32],          // state root
             0,                  // timestamp
             0x1f0fffff,         // difficulty (very easy)
             0,                  // nonce
@@ -264,6 +265,7 @@ impl Blockchain {
             1, // version
             self.state.best_block_hash(),
             merkle_root,
+            [0u8; 32],   // state root
             chrono::Utc::now().timestamp() as u64,
             difficulty,
             0,           // Nonce will be set by miner
