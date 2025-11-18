@@ -414,6 +414,16 @@ struct AnchorProofRequest {
     proof_hash: String,
     /// Optional metadata
     metadata: Option<serde_json::Value>,
+    /// UTXO input - previous output hash (32 bytes hex) - REQUIRED
+    previous_output_hash: String,
+    /// UTXO input - output index - REQUIRED
+    output_index: u32,
+    /// UTXO input - signature (hex) - REQUIRED
+    signature: String,
+    /// UTXO input - public key (hex) - REQUIRED
+    public_key: String,
+    /// Optional nonce
+    nonce: Option<u64>,
 }
 
 async fn anchor_proof<B: BlockchainRpc + Clone>(
@@ -466,15 +476,46 @@ async fn anchor_proof<B: BlockchainRpc + Clone>(
         .validate()
         .map_err(|e| ApiError::InvalidParams(e))?;
 
-    // Create proof anchor transaction
-    // Note: In production, this would need proper input from the sender's wallet
-    // For now, we create a placeholder transaction structure
+    // Validate and parse UTXO input from client (REQUIRED)
+    let previous_output_bytes = hex::decode(&req.previous_output_hash)
+        .map_err(|_| ApiError::InvalidParams("Invalid previous_output_hash format".to_string()))?;
+
+    if previous_output_bytes.len() != 32 {
+        return Err(ApiError::InvalidParams(
+            "previous_output_hash must be 32 bytes".to_string(),
+        ));
+    }
+
+    let mut previous_output_hash = [0u8; 32];
+    previous_output_hash.copy_from_slice(&previous_output_bytes);
+
+    // Decode signature from client
+    let signature_bytes = hex::decode(&req.signature)
+        .map_err(|_| ApiError::InvalidParams("Invalid signature format".to_string()))?;
+
+    if signature_bytes.is_empty() {
+        return Err(ApiError::InvalidParams(
+            "Signature cannot be empty".to_string(),
+        ));
+    }
+
+    // Decode public key from client
+    let public_key = hex::decode(&req.public_key)
+        .map_err(|_| ApiError::InvalidParams("Invalid public_key format".to_string()))?;
+
+    if public_key.is_empty() {
+        return Err(ApiError::InvalidParams(
+            "Public key cannot be empty".to_string(),
+        ));
+    }
+
+    // Create proof anchor transaction with real UTXO input from client
     let tx_input = boundless_core::TxInput {
-        previous_output_hash: [0u8; 32], // Placeholder
-        output_index: 0,
-        signature: boundless_core::Signature::Classical(vec![0u8; 64]), // Placeholder
-        public_key: vec![0u8; 33],
-        nonce: Some(0),
+        previous_output_hash,
+        output_index: req.output_index,
+        signature: boundless_core::Signature::Classical(signature_bytes),
+        public_key,
+        nonce: req.nonce,
     };
 
     let timestamp = std::time::SystemTime::now()
