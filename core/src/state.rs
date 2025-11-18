@@ -788,6 +788,100 @@ impl BlockchainState {
         self.utxo_set.len()
     }
 
+    /// Calculate state root hash
+    ///
+    /// Computes a deterministic hash of the current blockchain state including:
+    /// - UTXO set (sorted by OutPoint)
+    /// - Account nonces (sorted by Address)
+    /// - Contract Registry & Storage (sorted by Address)
+    /// - Proof Anchors (sorted by Proof ID)
+    /// - Asset Registry (sorted by Asset ID)
+    /// - Global scalars (Height, Supply, Best Hash, Block Reward)
+    ///
+    /// SECURITY: This implementation hashes actual content, not just counts.
+    /// Hashing only counts (len()) would allow content manipulation without
+    /// detection (e.g., minting infinite tokens without changing asset count).
+    ///
+    /// This state root enables:
+    /// - Light clients to verify state without full blockchain
+    /// - Fast sync by downloading state snapshots
+    /// - SPV (Simplified Payment Verification)
+    /// - State proofs for cross-chain bridges
+    ///
+    /// Note: This is a O(N log N) implementation due to sorting.
+    /// Production versions should move to an incremental Merkle Patricia Trie.
+    pub fn calculate_state_root(&self) -> [u8; 32] {
+        use sha3::{Digest, Sha3_256};
+
+        let mut hasher = Sha3_256::new();
+
+        // 1. Hash Global Scalars (block state)
+        hasher.update(self.block_height.to_le_bytes());
+        hasher.update(self.total_supply.to_le_bytes());
+        hasher.update(self.best_block_hash);
+        hasher.update(self.block_reward.to_le_bytes());
+
+        // 2. Hash UTXO Set (sorted by tx_hash + index for determinism)
+        let mut utxos: Vec<_> = self.utxo_set.iter().collect();
+        utxos.sort_by(|(a_out, _), (b_out, _)| {
+            a_out.tx_hash.cmp(&b_out.tx_hash)
+                .then(a_out.index.cmp(&b_out.index))
+        });
+
+        for (outpoint, output) in utxos {
+            hasher.update(outpoint.tx_hash);
+            hasher.update(outpoint.index.to_le_bytes());
+            hasher.update(output.amount.to_le_bytes());
+            hasher.update(output.recipient_pubkey_hash);
+            if let Some(ref lock_time) = output.lock_time {
+                hasher.update(lock_time.to_le_bytes());
+            }
+        }
+
+        // 3. Hash Account Nonces (sorted by address for determinism)
+        let mut nonces: Vec<_> = self.account_nonces.iter().collect();
+        nonces.sort_by_key(|(addr, _)| *addr);
+
+        for (address, nonce) in nonces {
+            hasher.update(address);
+            hasher.update(nonce.to_le_bytes());
+        }
+
+        // 4. Hash Contracts (Registry + State)
+        let mut contracts: Vec<_> = self.contract_registry.iter().collect();
+        contracts.sort_by_key(|(addr, _)| *addr);
+
+        for (address, info) in contracts {
+            // Hash Contract Info (Immutable)
+            hasher.update(address);
+            hasher.update(&info.wasm_bytecode); // Full bytecode for code integrity
+            hasher.update(info.deployer);
+            hasher.update(info.deployed_at_height.to_le_bytes());
+            hasher.update(info.deployed_at_tx);
+
+            // Hash Contract State (Mutable Storage)
+            if let Some(state) = self.contract_states.get(address) {
+                let mut storage: Vec<_> = state.storage.iter().collect();
+                storage.sort_by_key(|(k, _)| *k);
+
+                for (key, value) in storage {
+                    hasher.update(key);
+                    hasher.update(value);
+                }
+            }
+        }
+
+        // 5. Hash Proof Anchors (actual content, not just count)
+        // SECURITY FIX: Hash proof content to prevent manipulation
+        hasher.update(self.proof_storage.calculate_state_hash());
+
+        // 6. Hash Asset Registry (actual content, not just count)
+        // SECURITY FIX: Hash asset definitions to prevent token minting attacks
+        hasher.update(self.asset_registry.calculate_state_hash());
+
+        hasher.finalize().into()
+    }
+
     /// Calculate transaction fee (inputs - outputs)
     /// Requires blockchain state access to look up input amounts
     pub fn calculate_transaction_fee(&self, tx: &Transaction) -> Result<u64, StateError> {

@@ -374,6 +374,45 @@ impl AssetRegistry {
     pub fn total_assets(&self) -> usize {
         self.assets.len()
     }
+
+    /// Calculate state hash for all assets and balances
+    ///
+    /// Returns a deterministic hash of all asset definitions and balances
+    /// for state root calculation. Sorts assets by ID to ensure deterministic
+    /// ordering across all nodes.
+    ///
+    /// SECURITY: This hashes actual asset content (not just count) to prevent
+    /// token minting attacks that could change balances without detection.
+    pub fn calculate_state_hash(&self) -> [u8; 32] {
+        use sha3::{Digest, Sha3_256};
+
+        let mut hasher = Sha3_256::new();
+
+        // Sort assets by ID for deterministic hashing
+        let mut assets: Vec<_> = self.assets.iter().collect();
+        assets.sort_by_key(|(id, _)| *id);
+
+        for (asset_id, def) in assets {
+            hasher.update(asset_id);
+            hasher.update(def.symbol.as_bytes());
+            hasher.update(def.total_supply.to_le_bytes());
+            hasher.update(def.issuer);
+            hasher.update(&[if def.transferable { 1 } else { 0 }]);
+            hasher.update(&[if def.mintable { 1 } else { 0 }]);
+        }
+
+        // Sort balances for deterministic hashing
+        let mut balances: Vec<_> = self.balances.iter().collect();
+        balances.sort_by_key(|((acc, asset), _)| (*acc, *asset));
+
+        for ((account, asset_id), balance) in balances {
+            hasher.update(account);
+            hasher.update(asset_id);
+            hasher.update(balance.to_le_bytes());
+        }
+
+        hasher.finalize().into()
+    }
 }
 
 #[cfg(test)]

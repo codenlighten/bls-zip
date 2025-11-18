@@ -197,6 +197,31 @@ impl ProofStorage {
     pub fn total_identities(&self) -> usize {
         self.identity_proofs.len()
     }
+
+    /// Calculate state hash for all proof anchors
+    ///
+    /// Returns a deterministic hash of all proof content for state root calculation.
+    /// Sorts proofs by ID to ensure deterministic ordering across all nodes.
+    pub fn calculate_state_hash(&self) -> [u8; 32] {
+        use sha3::{Digest, Sha3_256};
+
+        let mut hasher = Sha3_256::new();
+
+        // Sort proofs by ID for deterministic hashing
+        let mut proofs: Vec<_> = self.proofs.iter().collect();
+        proofs.sort_by_key(|(id, _)| *id);
+
+        for (proof_id, anchor) in proofs {
+            hasher.update(proof_id);
+            hasher.update(anchor.proof_hash);
+            hasher.update(anchor.identity_id);
+            hasher.update(anchor.timestamp.to_le_bytes());
+            hasher.update(&[anchor.proof_type as u8]);
+            hasher.update(anchor.block_height.to_le_bytes());
+        }
+
+        hasher.finalize().into()
+    }
 }
 
 #[cfg(test)]

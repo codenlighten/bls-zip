@@ -260,12 +260,16 @@ impl Blockchain {
             [0u8; 32]
         };
 
+        // Calculate state root from current blockchain state
+        // This enables light clients to verify state without full blockchain
+        let state_root = self.state.calculate_state_root();
+
         // Create block header
         let header = BlockHeader::new(
             1, // version
             self.state.best_block_hash(),
             merkle_root,
-            [0u8; 32],   // state root
+            state_root,  // Real state root calculated from blockchain state
             chrono::Utc::now().timestamp() as u64,
             difficulty,
             0,           // Nonce will be set by miner
