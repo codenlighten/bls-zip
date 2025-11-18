@@ -67,6 +67,13 @@ import type {
   MarketSector,
   // Hardware
   HardwarePass,
+  // Metrics & Analytics
+  DashboardSummary,
+  BlockchainMetricsSnapshot,
+  UserActivityMetrics,
+  SystemPerformanceMetrics,
+  SustainabilityMetrics,
+  PlatformMetric,
   // Common
   ApiResponse,
 } from '@/types'
@@ -1097,6 +1104,75 @@ class ApiClient {
   async archiveCapsule(capsule_id: string): Promise<ApiResponse<void>> {
     return this.request(`/api/capsules/${capsule_id}/archive`, {
       method: 'PUT',
+    })
+  }
+
+  // ============================================================================
+  // METRICS & ANALYTICS API
+  // ============================================================================
+
+  async getDashboardMetrics(): Promise<ApiResponse<{ dashboard: DashboardSummary }>> {
+    return this.request('/api/metrics/dashboard')
+  }
+
+  async getBlockchainMetrics(): Promise<ApiResponse<{ metrics: BlockchainMetricsSnapshot }>> {
+    return this.request('/api/metrics/blockchain')
+  }
+
+  async getUserMetrics(): Promise<ApiResponse<{ metrics: UserActivityMetrics }>> {
+    return this.request('/api/metrics/users')
+  }
+
+  async getSystemMetrics(): Promise<ApiResponse<{ metrics: SystemPerformanceMetrics }>> {
+    return this.request('/api/metrics/system')
+  }
+
+  async getSustainabilityMetrics(): Promise<ApiResponse<{ metrics: SustainabilityMetrics }>> {
+    return this.request('/api/metrics/sustainability')
+  }
+
+  async getMetricTimeseries(
+    metric_name: string,
+    from?: string,
+    to?: string,
+    limit?: number
+  ): Promise<ApiResponse<{ metric_name: string; data_points: PlatformMetric[]; count: number }>> {
+    const params = new URLSearchParams()
+    if (from) params.append('from', from)
+    if (to) params.append('to', to)
+    if (limit) params.append('limit', limit.toString())
+
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return this.request(`/api/metrics/timeseries/${metric_name}${query}`)
+  }
+
+  async collectAllMetrics(): Promise<ApiResponse<{ success: boolean; message: string }>> {
+    return this.request('/api/metrics/collect/all', {
+      method: 'POST',
+    })
+  }
+
+  async collectBlockchainMetrics(): Promise<ApiResponse<{ success: boolean; message: string }>> {
+    return this.request('/api/metrics/collect/blockchain', {
+      method: 'POST',
+    })
+  }
+
+  async collectUserMetrics(): Promise<ApiResponse<{ success: boolean; message: string }>> {
+    return this.request('/api/metrics/collect/users', {
+      method: 'POST',
+    })
+  }
+
+  async collectSystemMetrics(): Promise<ApiResponse<{ success: boolean; message: string }>> {
+    return this.request('/api/metrics/collect/system', {
+      method: 'POST',
+    })
+  }
+
+  async collectSustainabilityMetrics(): Promise<ApiResponse<{ success: boolean; message: string }>> {
+    return this.request('/api/metrics/collect/sustainability', {
+      method: 'POST',
     })
   }
 }

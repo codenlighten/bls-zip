@@ -26,6 +26,7 @@ pub mod asset;
 pub mod events;
 pub mod hardware;
 pub mod contract;
+pub mod metrics;
 
 /// Start the Enterprise Multipass API server
 /// FIX M-11: Added RateLimiter parameter for login rate limiting
@@ -39,6 +40,7 @@ pub async fn serve(
     event_service: Arc<RwLock<EventService>>,
     hardware_service: Arc<RwLock<HardwareService>>,
     contract_service: Arc<RwLock<ContractService>>,
+    metrics_service: Arc<RwLock<MetricsService>>,
     rate_limiter: Arc<RateLimiter>,
 ) -> Result<()> {
     // Build the main router with auth middleware
@@ -54,6 +56,7 @@ pub async fn serve(
         .nest("/api/reports", events::report_routes(event_service))
         .nest("/api/hardware", hardware::routes(hardware_service))
         .nest("/api/contracts", contract::routes(contract_service.clone()))
+        .nest("/api/metrics", metrics::routes(metrics_service))
         .layer(middleware::from_fn_with_state(
             auth_service.clone(),
             auth_middleware

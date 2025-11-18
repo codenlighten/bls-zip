@@ -42,6 +42,7 @@ anyhow = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 dotenv = "0.15"
+rust_decimal = { version = "1.33", features = ["serde-float"] }
 
 # Crypto - Passwords & Hashing
 argon2 = "0.5"

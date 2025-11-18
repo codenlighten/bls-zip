@@ -58,6 +58,7 @@ pub struct EnterpriseMultipass {
     pub event_service: Arc<RwLock<services::EventService>>,
     pub hardware_service: Arc<RwLock<services::HardwareService>>,
     pub contract_service: Arc<RwLock<services::ContractService>>,
+    pub metrics_service: Arc<RwLock<services::MetricsService>>,
 
     // Security services
     pub rate_limiter: Arc<RateLimiter>,
@@ -93,7 +94,7 @@ impl EnterpriseMultipass {
         let application_service = Arc::new(RwLock::new(services::ApplicationService::new(pool.clone())));
         let asset_service = Arc::new(RwLock::new(services::AssetService::new(
             pool.clone(),
-            blockchain_rpc_url,
+            blockchain_rpc_url.clone(),
         )));
         let event_service = Arc::new(RwLock::new(services::EventService::new(pool.clone())));
         let hardware_service = Arc::new(RwLock::new(services::HardwareService::new(pool.clone())));
@@ -101,6 +102,11 @@ impl EnterpriseMultipass {
         let contract_service = Arc::new(RwLock::new(services::ContractService::new(
             pool.clone(),
             blockchain_client,
+        )));
+
+        let metrics_service = Arc::new(RwLock::new(services::MetricsService::new(
+            pool.clone(),
+            blockchain_rpc_url.clone(),
         )));
 
         // Initialize security services
@@ -120,6 +126,7 @@ impl EnterpriseMultipass {
             event_service,
             hardware_service,
             contract_service,
+            metrics_service,
             rate_limiter,
             audit_logger,
         })
@@ -138,6 +145,7 @@ impl EnterpriseMultipass {
             self.event_service.clone(),
             self.hardware_service.clone(),
             self.contract_service.clone(),
+            self.metrics_service.clone(),
             self.rate_limiter.clone(),
         ).await
     }

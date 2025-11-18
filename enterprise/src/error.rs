@@ -76,6 +76,9 @@ pub enum EnterpriseError {
     #[error("Failed to anchor proof on chain: {0}")]
     ChainAnchorFailed(String),
 
+    #[error("Failed to connect to blockchain")]
+    BlockchainConnectionError,
+
     // Database errors
     #[error("Database error: {0}")]
     DatabaseError(String),
@@ -166,6 +169,7 @@ impl IntoResponse for EnterpriseError {
             EnterpriseError::TransactionFailed(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             EnterpriseError::BlockchainError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             EnterpriseError::ChainAnchorFailed(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            EnterpriseError::BlockchainConnectionError => (StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
             EnterpriseError::DatabaseError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             EnterpriseError::CryptoError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             EnterpriseError::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),

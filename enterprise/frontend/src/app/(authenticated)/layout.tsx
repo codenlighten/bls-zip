@@ -64,6 +64,7 @@ export default function AuthenticatedLayout({
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+    { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
     { name: 'Identity (CIVA)', href: '/identity', icon: UserCircleIcon },
     { name: 'Assets & Apps', href: '/wallet', icon: WalletIcon },
     { name: 'Contracts', href: '/contracts', icon: DocumentTextIcon },

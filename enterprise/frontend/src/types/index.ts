@@ -958,6 +958,82 @@ export interface CapsuleActivity {
   result: 'allowed' | 'denied'
 }
 
+// ============================================================================
+// METRICS & ANALYTICS
+// ============================================================================
+
+export interface DashboardSummary {
+  blockchain?: BlockchainMetricsSnapshot
+  users?: UserActivityMetrics
+  system?: SystemPerformanceMetrics
+  sustainability?: SustainabilityMetrics
+  timestamp: string
+}
+
+export interface BlockchainMetricsSnapshot {
+  snapshot_id: string
+  block_height: number
+  total_transactions: number
+  active_contracts: number
+  tps_1min?: number
+  tps_1hour?: number
+  tps_24hour?: number
+  peer_count: number
+  recorded_at: string
+}
+
+export interface UserActivityMetrics {
+  metrics_id: string
+  total_users: number
+  active_users_1hour: number
+  active_users_24hour: number
+  active_users_7days: number
+  new_users_24hour: number
+  total_sessions: number
+  avg_session_duration_minutes?: number
+  recorded_at: string
+}
+
+export interface SystemPerformanceMetrics {
+  metrics_id: string
+  api_requests_per_minute: number
+  avg_response_time_ms: number
+  error_rate_percent: number
+  database_connections: number
+  cache_hit_rate_percent?: number
+  memory_usage_mb?: number
+  cpu_usage_percent?: number
+  recorded_at: string
+}
+
+export interface SustainabilityMetrics {
+  sustainability_id: string
+  estimated_power_consumption_kwh?: number
+  energy_per_transaction_wh?: number
+  estimated_carbon_kg?: number
+  carbon_per_transaction_g?: number
+  storage_efficiency_percent?: number
+  network_efficiency_percent?: number
+  computation_efficiency_percent?: number
+  overall_sustainability_score?: number
+  sustainability_grade?: string
+  recorded_at: string
+}
+
+export interface PlatformMetric {
+  metric_id: string
+  metric_type: MetricType
+  metric_name: string
+  metric_value: number
+  metric_unit?: string
+  metadata?: Record<string, any>
+  recorded_at: string
+}
+
+export type MetricType = 'blockchain' | 'user_activity' | 'system_performance' | 'sustainability' | 'business'
+
+export type AggregationInterval = 'minute' | 'hour' | 'day' | 'week' | 'month'
+
 // ERROR TYPES
 // ============================================================================
 
