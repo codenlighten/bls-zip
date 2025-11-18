@@ -584,18 +584,11 @@ impl NetworkNode {
                             // Dial discovered peers
                             for peer_id in ok.peers {
                                 if !self.peers.contains_key(&peer_id) {
-                                    // Get addresses from DHT and dial
-                                    if let Some(addrs) = self.swarm
-                                        .behaviour_mut()
-                                        .kademlia
-                                        .addresses_of_peer(&peer_id)
-                                        .next()
-                                    {
-                                        if let Err(e) = self.swarm.dial(addrs.clone()) {
-                                            warn!("Failed to dial DHT peer {}: {}", peer_id, e);
-                                        } else {
-                                            info!("📞 Dialing DHT-discovered peer: {}", peer_id);
-                                        }
+                                    // Try to dial discovered peer directly
+                                    if let Err(e) = self.swarm.dial(peer_id) {
+                                        warn!("Failed to dial DHT peer {}: {}", peer_id, e);
+                                    } else {
+                                        info!("📞 Dialing DHT-discovered peer: {}", peer_id);
                                     }
                                 }
                             }

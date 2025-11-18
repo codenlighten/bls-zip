@@ -578,6 +578,7 @@ name = "boundless-node"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "boundless-consensus",
  "boundless-core",
  "boundless-crypto",
@@ -590,6 +591,8 @@ dependencies = [
  "futures",
  "hex",
  "hyper 0.14.32",
+ "num_cpus",
+ "primitive-types",
  "prometheus",
  "serde",
  "serde_json",

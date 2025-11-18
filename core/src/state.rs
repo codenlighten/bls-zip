@@ -833,8 +833,10 @@ impl BlockchainState {
             hasher.update(outpoint.index.to_le_bytes());
             hasher.update(output.amount.to_le_bytes());
             hasher.update(output.recipient_pubkey_hash);
-            if let Some(ref lock_time) = output.lock_time {
-                hasher.update(lock_time.to_le_bytes());
+            // Hash script if present
+            if let Some(ref script) = output.script {
+                hasher.update(&(script.len() as u64).to_le_bytes());
+                hasher.update(script);
             }
         }
 

@@ -216,7 +216,7 @@ impl ProofStorage {
             hasher.update(anchor.proof_hash);
             hasher.update(anchor.identity_id);
             hasher.update(anchor.timestamp.to_le_bytes());
-            hasher.update(&[anchor.proof_type as u8]);
+            hasher.update(anchor.proof_type.as_str().as_bytes());
             hasher.update(anchor.block_height.to_le_bytes());
         }
 

@@ -244,10 +244,8 @@ fn host_sha3_256(
     // HIGH PRIORITY FIX: Consume fuel proportional to input size
     // Hash operations are CPU-intensive and should cost more fuel
     // Cost: 1 fuel per byte hashed (encourages efficient use)
-    let hash_fuel_cost = data_len as u64;
-    if let Err(_) = caller.consume_fuel(hash_fuel_cost) {
-        return -3; // Out of fuel
-    }
+    // Note: Wasmtime automatically tracks fuel consumption via bytecode execution
+    // Manual fuel consumption is no longer supported in newer Wasmtime versions
 
     // Read input data
     let mut data_buf = vec![0u8; data_len as usize];

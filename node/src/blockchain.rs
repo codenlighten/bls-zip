@@ -4,10 +4,13 @@ use anyhow::Result;
 use boundless_consensus::DifficultyAdjustment;
 use boundless_core::{Block, BlockHeader, BlockchainState, OutPoint, Transaction, TxOutput};
 use boundless_storage::Database;
+use primitive_types::U256;
 use sha3::{Digest, Sha3_256};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct Blockchain {
     /// Current blockchain state
     state: BlockchainState,
@@ -19,7 +22,7 @@ pub struct Blockchain {
     data_dir: PathBuf,
 
     /// Persistent storage
-    storage: Option<Database>,
+    storage: Option<Arc<Database>>,
 
     /// Block cache (height -> block)
     block_cache: HashMap<u64, Block>,
@@ -91,7 +94,7 @@ impl Blockchain {
             state,
             config,
             data_dir,
-            storage: Some(storage),
+            storage: Some(Arc::new(storage)),
             block_cache: HashMap::new(),
             pending_txs: Vec::new(),
             fork_blocks: HashMap::new(),
@@ -318,6 +321,11 @@ impl Blockchain {
         }
     }
 
+    /// Alias for get_block (API compatibility)
+    pub fn get_block_by_height(&self, height: u64) -> Option<Block> {
+        self.get_block(height)
+    }
+
     /// Get block by hash
     pub fn get_block_by_hash(&self, hash: &[u8; 32]) -> Option<Block> {
         if let Some(storage) = &self.storage {
@@ -497,13 +505,14 @@ impl Blockchain {
 
         // Verify PoW
         let block_hash = block.header.hash();
+        let hash_value = U256::from_big_endian(&block_hash);
         let target = BlockHeader::compact_to_target(block.header.difficulty_target);
 
-        if block_hash > target {
+        if hash_value > target {
             anyhow::bail!(
                 "Invalid proof of work: block hash {} exceeds target {}",
                 hex::encode(&block_hash[..8]),
-                hex::encode(&target[..8])
+                format!("{:x}", target)
             );
         }
 
@@ -573,7 +582,7 @@ impl Blockchain {
 
         // Iterate through all blocks and sum their difficulty
         for height in 0..=current_height {
-            if let Ok(block) = self.get_block_by_height(height) {
+            if let Some(block) = self.get_block_by_height(height) {
                 // Work = difficulty target (simplified)
                 // In a full implementation: work = 2^256 / (target + 1)
                 total_work = total_work.saturating_add(block.header.difficulty_target as u64);

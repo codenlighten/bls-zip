@@ -98,8 +98,9 @@ impl ProofOfWork {
 
         if current_timestamp > now + MAX_FUTURE_DRIFT {
             return Err(ConsensusError::TimestampTooFarInFuture {
-                timestamp: current_timestamp,
-                max_allowed: now + MAX_FUTURE_DRIFT,
+                block_time: current_timestamp,
+                current_time: now,
+                max_drift: MAX_FUTURE_DRIFT,
             });
         }
 

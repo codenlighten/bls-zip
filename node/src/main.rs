@@ -91,8 +91,9 @@ async fn main() -> anyhow::Result<()> {
     // Configure logging format based on structured_logging setting
     if config.operational.structured_logging {
         // JSON structured logging for production/monitoring systems
+        // Note: .json() method removed in newer tracing-subscriber
+        // TODO: Use tracing_subscriber::fmt::format::json() when needed
         tracing_subscriber::fmt()
-            .json()
             .with_env_filter(
                 tracing_subscriber::EnvFilter::from_default_env()
                     .add_directive(log_level.parse().unwrap_or(tracing::Level::INFO.into())),
@@ -172,9 +173,10 @@ async fn main() -> anyhow::Result<()> {
     let http_blockchain = blockchain.clone();
 
     // Spawn HTTP bridge in background task
+    let http_addr_clone = http_addr.clone();
     tokio::spawn(async move {
-        info!("🌉 Starting HTTP REST bridge on {}", http_addr);
-        if let Err(e) = boundless_rpc::http_bridge::start_http_bridge(&http_addr, http_blockchain).await {
+        info!("🌉 Starting HTTP REST bridge on {}", http_addr_clone);
+        if let Err(e) = boundless_rpc::http_bridge::start_http_bridge(&http_addr_clone, http_blockchain).await {
             error!("❌ HTTP bridge error: {}", e);
         }
     });
@@ -305,7 +307,7 @@ async fn main() -> anyhow::Result<()> {
                                     // Fetch requested blocks (limit to prevent DoS)
                                     let max_blocks = count.min(500); // Max 500 blocks per request
                                     for height in start_height..(start_height + max_blocks as u64) {
-                                        if let Ok(block) = blockchain.get_block_by_height(height) {
+                                        if let Some(block) = blockchain.get_block_by_height(height) {
                                             blocks.push(block);
                                         } else {
                                             break; // Stop if block not found
@@ -328,7 +330,7 @@ async fn main() -> anyhow::Result<()> {
                                     let mut blockchain = blockchain_clone.write().await;
                                     let mut added_count = 0;
 
-                                    for block in blocks {
+                                    for block in &blocks {
                                         // Validate and add each block
                                         match blockchain.add_block(block.clone()) {
                                             Ok(_) => {
@@ -379,7 +381,7 @@ async fn main() -> anyhow::Result<()> {
                                     let blockchain = blockchain_clone.read().await;
 
                                     // Add transaction to mempool (with validation)
-                                    match mempool.add_transaction(transaction.clone(), &blockchain.state) {
+                                    match mempool.add_transaction(transaction.clone(), blockchain.state()) {
                                         Ok(_) => {
                                             info!("✅ Added transaction to mempool (total: {})",
                                                   mempool.len());

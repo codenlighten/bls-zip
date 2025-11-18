@@ -78,6 +78,15 @@ impl BlockchainRpc for Blockchain {
         self.state().proof_storage().verify_proof(proof_hash).cloned()
     }
 
+    fn get_proofs_by_identity(&self, identity_id: &[u8; 32]) -> Vec<boundless_core::ProofAnchor> {
+        self.state()
+            .proof_storage()
+            .get_identity_proofs(identity_id)
+            .into_iter()
+            .cloned()
+            .collect()
+    }
+
     fn get_utxos(&self, address: &[u8; 32]) -> Vec<boundless_rpc::types::UtxoData> {
         // Get UTXOs from the blockchain state
         let utxos = self.state().get_utxos(address);

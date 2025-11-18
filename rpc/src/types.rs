@@ -220,10 +220,10 @@ impl TransactionDetailInfo {
 impl TxInputInfo {
     pub fn from_tx_input(input: &boundless_core::TxInput) -> Self {
         Self {
-            prev_output_hash: hex::encode(input.prev_tx_hash),
-            output_index: input.prev_output_index,
-            signature_type: format!("{:?}", input.signature_type),
-            signature_size_bytes: input.signature.len(),
+            prev_output_hash: hex::encode(input.previous_output_hash),
+            output_index: input.output_index,
+            signature_type: format!("{:?}", &input.signature),
+            signature_size_bytes: input.signature.size_bytes(),
             public_key: hex::encode(&input.public_key),
         }
     }
@@ -233,8 +233,8 @@ impl TxOutputInfo {
     pub fn from_tx_output(output: &boundless_core::TxOutput) -> Self {
         Self {
             amount: output.amount,
-            recipient_hash: hex::encode(&output.recipient),
-            script_type: format!("{:?}", output.script_type),
+            recipient_hash: hex::encode(&output.recipient_pubkey_hash),
+            script_type: if output.script.is_some() { "Custom".to_string() } else { "Standard".to_string() },
             is_spent: None, // Would need UTXO tracking to determine
         }
     }
