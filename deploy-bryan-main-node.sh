@@ -31,7 +31,7 @@ NC='\033[0m' # No Color
 INSTALL_DIR="$HOME/boundless-bls-main"
 DATA_DIR="$HOME/boundless-data"  # Separate data directory for easy backup
 LOG_DIR="$DATA_DIR/logs"
-REPO_URL="git@github.com:Saifullah62/BLS.git"  # Bryan's original repo
+REPO_URL="https://github.com/codenlighten/bls-zip.git"  # Public HTTPS access
 REPO_BRANCH="main"
 
 # Bootnode configuration (connect to your node)
