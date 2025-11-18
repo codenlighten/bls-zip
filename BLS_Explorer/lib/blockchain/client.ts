@@ -94,6 +94,7 @@ export class BlockchainClient {
       difficulty_target: raw.header.difficulty_target.toString(),
       nonce: raw.header.nonce.toString(),
       merkle_root: raw.header.merkle_root,
+      state_root: raw.header.state_root || '0x0000000000000000000000000000000000000000000000000000000000000000',
       size: 1000, // Estimate or calculate
       version: raw.header.version,
       transactions: raw.transactions, // Include actual transactions

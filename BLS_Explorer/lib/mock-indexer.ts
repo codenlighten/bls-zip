@@ -82,6 +82,7 @@ class MockIndexer {
       tx_count: Math.floor(Math.random() * 10) + 1,
       miner: getRandomElement(MOCK_ADDRESSES),
       merkle_root: generateHash(''),
+      state_root: generateHash(''),
       difficulty_target: '0x' + '0'.repeat(8) + Math.floor(Math.random() * 1000000).toString(16).padStart(8, '0'),
       nonce: '0x' + Math.floor(Math.random() * 0xFFFFFFFF).toString(16).padStart(8, '0'),
       size: Math.floor(Math.random() * 500000) + 100000,

@@ -12,6 +12,7 @@ pub struct BlockInfo {
     pub difficulty_target: u32,
     pub nonce: u64,
     pub merkle_root: String,
+    pub state_root: String,
     pub transaction_count: usize,
     pub transactions: Vec<TransactionInfo>,
 }
@@ -26,6 +27,7 @@ impl BlockInfo {
             difficulty_target: block.header.difficulty_target,
             nonce: block.header.nonce,
             merkle_root: hex::encode(block.header.merkle_root),
+            state_root: hex::encode(block.header.state_root),
             transaction_count: block.transactions.len(),
             transactions: block
                 .transactions
@@ -125,4 +127,115 @@ pub struct UtxoData {
 
     /// Optional locking script (hex-encoded)
     pub script: Option<String>,
+}
+
+/// Proof anchor information returned by RPC
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProofAnchorInfo {
+    /// Unique proof identifier (hex-encoded)
+    pub proof_id: String,
+
+    /// Identity that owns this proof (hex-encoded)
+    pub identity_id: String,
+
+    /// Type of proof
+    pub proof_type: String,
+
+    /// Hash of the actual proof data (hex-encoded)
+    pub proof_hash: String,
+
+    /// Block height where proof was anchored
+    pub block_height: u64,
+
+    /// Timestamp of anchoring
+    pub timestamp: u64,
+
+    /// Optional metadata (hex-encoded)
+    pub metadata: String,
+}
+
+impl ProofAnchorInfo {
+    pub fn from_proof(proof: &boundless_core::ProofAnchor) -> Self {
+        Self {
+            proof_id: hex::encode(proof.proof_id),
+            identity_id: hex::encode(proof.identity_id),
+            proof_type: proof.proof_type.as_str().to_string(),
+            proof_hash: hex::encode(proof.proof_hash),
+            block_height: proof.block_height,
+            timestamp: proof.timestamp,
+            metadata: hex::encode(&proof.metadata),
+        }
+    }
+}
+
+/// Full transaction details returned by RPC
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionDetailInfo {
+    pub tx_hash: String,
+    pub version: u32,
+    pub timestamp: u64,
+    pub block_height: u64,
+    pub block_hash: String,
+    pub inputs: Vec<TxInputInfo>,
+    pub outputs: Vec<TxOutputInfo>,
+    pub fee: u64,
+    pub status: String,
+}
+
+/// Transaction input information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TxInputInfo {
+    pub prev_output_hash: String,
+    pub output_index: u32,
+    pub signature_type: String,
+    pub signature_size_bytes: usize,
+    pub public_key: String,
+}
+
+/// Transaction output information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TxOutputInfo {
+    pub amount: u64,
+    pub recipient_hash: String,
+    pub script_type: String,
+    pub is_spent: Option<bool>,
+}
+
+impl TransactionDetailInfo {
+    pub fn from_transaction_record(record: &boundless_core::TransactionRecord) -> Self {
+        Self {
+            tx_hash: hex::encode(record.tx_hash),
+            version: 1, // Default version
+            timestamp: record.timestamp,
+            block_height: record.block_height,
+            block_hash: hex::encode(record.block_hash),
+            inputs: record.inputs.iter().map(TxInputInfo::from_tx_input).collect(),
+            outputs: record.outputs.iter().map(TxOutputInfo::from_tx_output).collect(),
+            fee: record.fee,
+            status: format!("{:?}", record.status),
+        }
+    }
+}
+
+impl TxInputInfo {
+    pub fn from_tx_input(input: &boundless_core::TxInput) -> Self {
+        Self {
+            prev_output_hash: hex::encode(input.prev_tx_hash),
+            output_index: input.prev_output_index,
+            signature_type: format!("{:?}", input.signature_type),
+            signature_size_bytes: input.signature.len(),
+            public_key: hex::encode(&input.public_key),
+        }
+    }
+}
+
+impl TxOutputInfo {
+    pub fn from_tx_output(output: &boundless_core::TxOutput) -> Self {
+        Self {
+            amount: output.amount,
+            recipient_hash: hex::encode(&output.recipient),
+            script_type: format!("{:?}", output.script_type),
+            is_spent: None, // Would need UTXO tracking to determine
+        }
+    }
 }

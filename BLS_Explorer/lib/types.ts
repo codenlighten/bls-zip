@@ -60,6 +60,7 @@ export interface Block {
   tx_count: number;
   miner: string;
   merkle_root: string;
+  state_root: string;
   difficulty_target: string;
   nonce: string;
   size: number;

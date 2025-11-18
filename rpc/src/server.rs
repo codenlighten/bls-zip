@@ -149,6 +149,9 @@ pub trait BlockchainRpc: Send + Sync {
     /// Verify proof by hash
     fn verify_proof_by_hash(&self, proof_hash: &[u8; 32]) -> Option<boundless_core::ProofAnchor>;
 
+    /// Get all proofs for an identity
+    fn get_proofs_by_identity(&self, identity_id: &[u8; 32]) -> Vec<boundless_core::ProofAnchor>;
+
     /// Get UTXOs (unspent transaction outputs) for an address
     fn get_utxos(&self, address: &[u8; 32]) -> Vec<crate::types::UtxoData>;
 
@@ -439,6 +442,112 @@ impl RpcServer {
             },
         )?;
 
+        // chain_getProof - Get proof by proof ID
+        module.register_async_method("chain_getProof", |params, blockchain| async move {
+            let proof_id_str: String = params.one()?;
+            let proof_id_bytes = hex::decode(&proof_id_str)
+                .map_err(|_| RpcError::InvalidParams("Invalid proof ID format".to_string()))?;
+
+            if proof_id_bytes.len() != 32 {
+                return Err(RpcError::InvalidParams("Proof ID must be 32 bytes".to_string()));
+            }
+
+            let mut proof_id = [0u8; 32];
+            proof_id.copy_from_slice(&proof_id_bytes);
+
+            let chain = blockchain.read().await;
+
+            match chain.get_proof_by_id(&proof_id) {
+                Some(proof) => Ok::<ProofAnchorInfo, RpcError>(ProofAnchorInfo::from_proof(&proof)),
+                None => Err(RpcError::InvalidParams(format!("Proof not found: {}", proof_id_str))),
+            }
+        })?;
+
+        // chain_verifyProof - Verify proof by proof hash
+        module.register_async_method("chain_verifyProof", |params, blockchain| async move {
+            let proof_hash_str: String = params.one()?;
+            let proof_hash_bytes = hex::decode(&proof_hash_str)
+                .map_err(|_| RpcError::InvalidParams("Invalid proof hash format".to_string()))?;
+
+            if proof_hash_bytes.len() != 32 {
+                return Err(RpcError::InvalidParams("Proof hash must be 32 bytes".to_string()));
+            }
+
+            let mut proof_hash = [0u8; 32];
+            proof_hash.copy_from_slice(&proof_hash_bytes);
+
+            let chain = blockchain.read().await;
+
+            match chain.verify_proof_by_hash(&proof_hash) {
+                Some(proof) => Ok::<ProofAnchorInfo, RpcError>(ProofAnchorInfo::from_proof(&proof)),
+                None => Err(RpcError::InvalidParams(format!("Proof not found or invalid: {}", proof_hash_str))),
+            }
+        })?;
+
+        // chain_getProofsByIdentity - Get all proofs for an identity
+        module.register_async_method("chain_getProofsByIdentity", |params, blockchain| async move {
+            let identity_id_str: String = params.one()?;
+            let identity_id_bytes = hex::decode(&identity_id_str)
+                .map_err(|_| RpcError::InvalidParams("Invalid identity ID format".to_string()))?;
+
+            if identity_id_bytes.len() != 32 {
+                return Err(RpcError::InvalidParams("Identity ID must be 32 bytes".to_string()));
+            }
+
+            let mut identity_id = [0u8; 32];
+            identity_id.copy_from_slice(&identity_id_bytes);
+
+            let chain = blockchain.read().await;
+
+            let proofs = chain.get_proofs_by_identity(&identity_id);
+            let proof_infos: Vec<ProofAnchorInfo> = proofs
+                .iter()
+                .map(|p| ProofAnchorInfo::from_proof(p))
+                .collect();
+
+            Ok::<Vec<ProofAnchorInfo>, RpcError>(proof_infos)
+        })?;
+
+        // chain_getTransaction - Get transaction by hash
+        module.register_async_method("chain_getTransaction", |params, blockchain| async move {
+            let tx_hash_str: String = params.one()?;
+            let tx_hash_bytes = hex::decode(&tx_hash_str)
+                .map_err(|_| RpcError::InvalidParams("Invalid transaction hash format".to_string()))?;
+
+            if tx_hash_bytes.len() != 32 {
+                return Err(RpcError::InvalidParams("Transaction hash must be 32 bytes".to_string()));
+            }
+
+            let mut tx_hash = [0u8; 32];
+            tx_hash.copy_from_slice(&tx_hash_bytes);
+
+            let chain = blockchain.read().await;
+
+            match chain.get_transaction(&tx_hash) {
+                Some(tx_record) => Ok::<TransactionDetailInfo, RpcError>(TransactionDetailInfo::from_transaction_record(&tx_record)),
+                None => Err(RpcError::InvalidParams(format!("Transaction not found: {}", tx_hash_str))),
+            }
+        })?;
+
+        // chain_getUtxos - Get UTXOs for an address
+        module.register_async_method("chain_getUtxos", |params, blockchain| async move {
+            let address_str: String = params.one()?;
+            let address_bytes = hex::decode(&address_str)
+                .map_err(|_| RpcError::InvalidAddress("Invalid address format".to_string()))?;
+
+            if address_bytes.len() != 32 {
+                return Err(RpcError::InvalidAddress("Address must be 32 bytes".to_string()));
+            }
+
+            let mut address = [0u8; 32];
+            address.copy_from_slice(&address_bytes);
+
+            let chain = blockchain.read().await;
+
+            let utxos = chain.get_utxos(&address);
+            Ok::<Vec<UtxoData>, RpcError>(utxos)
+        })?;
+
         // system_health
         module.register_async_method("system_health", |_, _blockchain| async move {
             Ok::<serde_json::Value, RpcError>(serde_json::json!({
@@ -537,6 +646,10 @@ mod tests {
             _proof_hash: &[u8; 32],
         ) -> Option<boundless_core::ProofAnchor> {
             None
+        }
+
+        fn get_proofs_by_identity(&self, _identity_id: &[u8; 32]) -> Vec<boundless_core::ProofAnchor> {
+            vec![]
         }
 
         fn get_utxos(&self, _address: &[u8; 32]) -> Vec<crate::types::UtxoData> {
