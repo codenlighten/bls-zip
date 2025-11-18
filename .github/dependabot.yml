@@ -1,0 +1,133 @@
+version: 2
+updates:
+  # Rust dependencies - Main workspace
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "rust"
+    assignees:
+      - "Saifullah62"
+    reviewers:
+      - "Saifullah62"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      # Group minor and patch updates for post-quantum crypto
+      pqc-updates:
+        patterns:
+          - "ml-kem"
+          - "ml-dsa"
+          - "pqcrypto-*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group development dependencies
+      dev-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Rust dependencies - Enterprise
+  - package-ecosystem: "cargo"
+    directory: "/enterprise"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "rust"
+      - "e2-multipass"
+    assignees:
+      - "Saifullah62"
+    commit-message:
+      prefix: "chore(deps/enterprise)"
+
+  # npm dependencies - BLS Explorer
+  - package-ecosystem: "npm"
+    directory: "/BLS_Explorer"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "javascript"
+      - "explorer"
+    assignees:
+      - "Saifullah62"
+    commit-message:
+      prefix: "chore(deps/explorer)"
+    groups:
+      # Group Next.js and React updates
+      react-ecosystem:
+        patterns:
+          - "react*"
+          - "next"
+          - "@next/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group UI libraries
+      ui-libraries:
+        patterns:
+          - "@radix-ui/*"
+          - "tailwindcss"
+          - "class-variance-authority"
+          - "clsx"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # npm dependencies - Enterprise Frontend
+  - package-ecosystem: "npm"
+    directory: "/enterprise/frontend"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "javascript"
+      - "e2-multipass"
+    assignees:
+      - "Saifullah62"
+    commit-message:
+      prefix: "chore(deps/enterprise-frontend)"
+    groups:
+      react-ecosystem:
+        patterns:
+          - "react*"
+          - "next"
+          - "@next/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci-cd"
+    assignees:
+      - "Saifullah62"
+    commit-message:
+      prefix: "chore(deps/actions)"

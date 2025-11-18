@@ -1,0 +1,64 @@
+# Code Owners for Boundless BLS Platform
+#
+# This file defines individuals or teams responsible for code in this repository.
+# Code owners are automatically requested for review when someone opens a pull request
+# that modifies code that they own.
+#
+# More info: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global owners - fallback for everything not explicitly defined
+* @Saifullah62
+
+# Blockchain Core
+/core/ @Saifullah62
+/core/src/crypto/ @Saifullah62
+/core/src/consensus/ @Saifullah62
+
+# Node & Networking
+/node/ @Saifullah62
+/node/src/network/ @Saifullah62
+/node/src/p2p/ @Saifullah62
+
+# RPC Server
+/rpc/ @Saifullah62
+/rpc/src/server.rs @Saifullah62
+/rpc/src/types.rs @Saifullah62
+
+# E² Multipass - Backend
+/enterprise/ @Saifullah62
+/enterprise/src/ @Saifullah62
+/enterprise/migrations/ @Saifullah62
+
+# E² Multipass - Frontend
+/enterprise/frontend/ @Saifullah62
+/enterprise/frontend/src/ @Saifullah62
+
+# BLS Explorer
+/BLS_Explorer/ @Saifullah62
+/BLS_Explorer/app/ @Saifullah62
+/BLS_Explorer/components/ @Saifullah62
+/BLS_Explorer/lib/ @Saifullah62
+
+# Security-sensitive files
+/core/src/crypto/ @Saifullah62
+/enterprise/src/auth/ @Saifullah62
+/enterprise/src/security/ @Saifullah62
+SECURITY.md @Saifullah62
+
+# CI/CD and Infrastructure
+/.github/ @Saifullah62
+/.github/workflows/ @Saifullah62
+Dockerfile* @Saifullah62
+docker-compose*.yml @Saifullah62
+
+# Documentation
+README.md @Saifullah62
+/docs/ @Saifullah62
+CONTRIBUTING.md @Saifullah62
+CODE_OF_CONDUCT.md @Saifullah62
+
+# Dependencies
+Cargo.toml @Saifullah62
+Cargo.lock @Saifullah62
+package.json @Saifullah62
+package-lock.json @Saifullah62
