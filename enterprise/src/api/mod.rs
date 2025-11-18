@@ -49,7 +49,7 @@ pub async fn serve(
     // All other routes require authentication
     let protected_routes = Router::new()
         .nest("/api/identity", identity::routes(identity_service.clone()))
-        .nest("/api/wallet", wallet::routes(wallet_service))
+        .nest("/api/wallet", wallet::routes(wallet_service.clone()))
         .nest("/api/applications", application::routes(application_service))
         .nest("/api/assets", asset::routes(asset_service.clone()))
         .nest("/api/market", asset::market_routes(asset_service))
