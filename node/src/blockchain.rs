@@ -512,6 +512,27 @@ impl Blockchain {
             tx.validate()?;
         }
 
+        // Verify state root (skip for genesis block)
+        if block.header.height > 0 {
+            // Create temporary state to simulate block application
+            let mut temp_state = self.state.clone();
+
+            // Apply block to temporary state
+            temp_state.apply_block(block)?;
+
+            // Calculate state root from temporary state
+            let calculated_state_root = temp_state.calculate_state_root();
+
+            // Verify state root matches
+            if calculated_state_root != block.header.state_root {
+                anyhow::bail!(
+                    "Invalid state root: expected {}, got {}",
+                    hex::encode(block.header.state_root),
+                    hex::encode(calculated_state_root)
+                );
+            }
+        }
+
         // Additional validation can be added here
         // - Merkle root verification
         // - Timestamp checks
