@@ -3,7 +3,9 @@ use async_trait::async_trait;
 use futures::StreamExt;
 use libp2p::{
     core::upgrade,
-    gossipsub, identity, mdns, noise,
+    gossipsub, identity,
+    kad::{self, store::MemoryStore, Mode, Record, RecordKey},
+    mdns, noise,
     request_response::{self, ProtocolSupport},
     swarm::{NetworkBehaviour, SwarmEvent},
     tcp, yamux, Multiaddr, PeerId, StreamProtocol, Swarm, Transport,
@@ -206,6 +208,8 @@ struct BoundlessBehaviour {
     gossipsub: gossipsub::Behaviour,
     mdns: mdns::tokio::Behaviour,
     request_response: request_response::Behaviour<BoundlessCodec>,
+    /// Kademlia DHT for global peer discovery
+    kademlia: kad::Behaviour<MemoryStore>,
 }
 
 /// P2P network node
@@ -284,11 +288,41 @@ impl NetworkNode {
 
         info!("🔄 Request-response protocol initialized");
 
+        // Create Kademlia DHT for global peer discovery
+        let mut kademlia = kad::Behaviour::new(local_peer_id, MemoryStore::new(local_peer_id));
+
+        // Set Kademlia to Server mode (allows other peers to discover us)
+        kademlia.set_mode(Some(Mode::Server));
+
+        // Add bootstrap nodes to Kademlia DHT
+        for bootnode in &config.bootnodes {
+            // Parse bootnode address to extract PeerId
+            // Format: /ip4/x.x.x.x/tcp/port/p2p/PeerId
+            if let Some(peer_id) = bootnode.iter().find_map(|proto| {
+                if let libp2p::multiaddr::Protocol::P2p(peer_id) = proto {
+                    Some(peer_id)
+                } else {
+                    None
+                }
+            }) {
+                kademlia.add_address(&peer_id, bootnode.clone());
+                info!("🔍 Added bootstrap node to DHT: {}", peer_id);
+            }
+        }
+
+        // Bootstrap the DHT (start discovering peers)
+        if let Err(e) = kademlia.bootstrap() {
+            warn!("Failed to bootstrap Kademlia DHT: {:?}", e);
+        } else {
+            info!("🌐 Kademlia DHT bootstrap initiated");
+        }
+
         // Create behaviour
         let behaviour = BoundlessBehaviour {
             gossipsub,
             mdns,
             request_response,
+            kademlia,
         };
 
         // Create swarm
@@ -535,6 +569,54 @@ impl NetworkNode {
                     }
                 }
             },
+            // Handle Kademlia DHT events
+            SwarmEvent::Behaviour(BoundlessBehaviourEvent::Kademlia(event)) => {
+                match event {
+                    kad::Event::OutboundQueryProgressed { result, .. } => match result {
+                        kad::QueryResult::Bootstrap(Ok(kad::BootstrapOk { peer, .. })) => {
+                            info!("🌐 DHT Bootstrap successful with peer: {}", peer);
+                        }
+                        kad::QueryResult::Bootstrap(Err(e)) => {
+                            warn!("⚠️  DHT Bootstrap error: {:?}", e);
+                        }
+                        kad::QueryResult::GetClosestPeers(Ok(ok)) => {
+                            info!("🔍 Found {} closest peers in DHT", ok.peers.len());
+                            // Dial discovered peers
+                            for peer_id in ok.peers {
+                                if !self.peers.contains_key(&peer_id) {
+                                    // Get addresses from DHT and dial
+                                    if let Some(addrs) = self.swarm
+                                        .behaviour_mut()
+                                        .kademlia
+                                        .addresses_of_peer(&peer_id)
+                                        .next()
+                                    {
+                                        if let Err(e) = self.swarm.dial(addrs.clone()) {
+                                            warn!("Failed to dial DHT peer {}: {}", peer_id, e);
+                                        } else {
+                                            info!("📞 Dialing DHT-discovered peer: {}", peer_id);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        kad::QueryResult::GetClosestPeers(Err(e)) => {
+                            warn!("⚠️  DHT GetClosestPeers error: {:?}", e);
+                        }
+                        _ => {}
+                    },
+                    kad::Event::RoutingUpdated { peer, .. } => {
+                        info!("📊 DHT routing table updated with peer: {}", peer);
+                    }
+                    kad::Event::UnroutablePeer { peer } => {
+                        warn!("⚠️  DHT: Peer {} is unroutable", peer);
+                    }
+                    kad::Event::RoutablePeer { peer, .. } => {
+                        info!("✅ DHT: Peer {} is routable", peer);
+                    }
+                    _ => {}
+                }
+            }
             // HIGH PRIORITY FIX: Handle request-response protocol events
             SwarmEvent::Behaviour(BoundlessBehaviourEvent::RequestResponse(event)) => {
                 use request_response::{Event, Message};
