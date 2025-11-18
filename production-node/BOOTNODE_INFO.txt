@@ -4,16 +4,23 @@ Boundless BLS Bootnode Information
 Primary Node (First Seed)
 -------------------------
 Peer ID: 12D3KooWDqN55HjCA5DBJ8DPvhrB3XPkgrRZH54DqcC5uQ94P74r
-IP Address: 192.168.1.13
-P2P Port: 30333
+Local IP: 192.168.1.13 (LAN)
+Public IP: 70.32.195.180 (Internet)
+P2P Port: 30333 (✅ PUBLICLY ACCESSIBLE)
 
-Multiaddr (add to Bryan's config.toml):
+Multiaddr for Bryan (PUBLIC - use this):
+/ip4/70.32.195.180/tcp/30333/p2p/12D3KooWDqN55HjCA5DBJ8DPvhrB3XPkgrRZH54DqcC5uQ94P74r
+
+Multiaddr for LAN devices:
 /ip4/192.168.1.13/tcp/30333/p2p/12D3KooWDqN55HjCA5DBJ8DPvhrB3XPkgrRZH54DqcC5uQ94P74r
 
 RPC Endpoints:
-- HTTP: http://192.168.1.13:9933
-- WebSocket: ws://192.168.1.13:9944
-- Metrics: http://192.168.1.13:9615/metrics
+- HTTP: http://192.168.1.13:9933 (LAN only - localhost bound)
+- WebSocket: ws://192.168.1.13:9944 (not active)
+- Metrics: http://192.168.1.13:9615 (LAN only)
+
+Note: RPC is bound to 127.0.0.1 - only accessible locally or via LAN.
+Bryan doesn't need RPC access - his node will have its own RPC endpoint.
 
 Genesis Block Hash:
 80f5f229801e88f6438be3502582a363d2d1e4e2e0d2da503e80f168b91daa6e
@@ -43,22 +50,20 @@ Instructions for Bryan
 
 1. Follow BRYAN_DEPLOYMENT_GUIDE.md step-by-step
 
-2. In your config.toml, add this bootnode:
+2. In your config.toml, add this PUBLIC bootnode:
    
    [network]
    bootnodes = [
-       "/ip4/192.168.1.13/tcp/30333/p2p/12D3KooWDqN55HjCA5DBJ8DPvhrB3XPkgrRZH54DqcC5uQ94P74r"
+       "/ip4/70.32.195.180/tcp/30333/p2p/12D3KooWDqN55HjCA5DBJ8DPvhrB3XPkgrRZH54DqcC5uQ94P74r"
    ]
 
 3. Start your node and verify connection:
-   - Check logs for "Connected to peer"
+   - Check logs for "Connected to peer 12D3KooWDqN..."
    - Both nodes should sync to same block height
    - Genesis hashes MUST match
 
-4. Test RPC connectivity from your server:
-   curl -X POST http://192.168.1.13:9933 \
-     -H "Content-Type: application/json" \
-     -d '{"jsonrpc":"2.0","method":"chain_getBlockHeight","params":[],"id":1}'
+4. Network is now PUBLIC - your node can connect from anywhere!
+   Port 30333 is forwarded and firewall allows incoming P2P connections.
 
 ========================================
 Network Topology
