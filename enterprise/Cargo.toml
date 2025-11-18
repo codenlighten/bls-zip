@@ -67,7 +67,7 @@ pbkdf2 = { version = "0.12", features = ["simple"] }  # Key derivation
 regex = "1.10"
 
 # JWT
-jsonwebtoken = "9.2"
+jsonwebtoken = "10.2"
 
 # HTTP client (for blockchain RPC)
 reqwest = { version = "0.11", features = ["json"] }
