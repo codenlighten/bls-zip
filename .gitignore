@@ -72,3 +72,6 @@ debug/
 # PostgreSQL
 *.dump
 *.backup
+production-node/node.pid
+production-node/logs/
+production-node/data/

@@ -1,0 +1,80 @@
+Boundless BLS Bootnode Information
+===================================
+
+Primary Node (First Seed)
+-------------------------
+Peer ID: 12D3KooWDqN55HjCA5DBJ8DPvhrB3XPkgrRZH54DqcC5uQ94P74r
+IP Address: 192.168.1.13
+P2P Port: 30333
+
+Multiaddr (add to Bryan's config.toml):
+/ip4/192.168.1.13/tcp/30333/p2p/12D3KooWDqN55HjCA5DBJ8DPvhrB3XPkgrRZH54DqcC5uQ94P74r
+
+RPC Endpoints:
+- HTTP: http://192.168.1.13:9933
+- WebSocket: ws://192.168.1.13:9944
+- Metrics: http://192.168.1.13:9615/metrics
+
+Genesis Block Hash:
+80f5f229801e88f6438be3502582a363d2d1e4e2e0d2da503e80f168b91daa6e
+
+Database Location:
+./production-node/data/db
+
+Configuration File:
+./production-node/config.toml
+
+Mining Status:
+✅ ACTIVE - Mining blocks with ~1M H/s
+
+Current Status:
+✅ Node running (PID: 224172)
+✅ P2P network listening on 0.0.0.0:30333
+✅ RPC HTTP server on 127.0.0.1:9933
+✅ Prometheus metrics on 0.0.0.0:9615
+✅ Mining enabled (auto-detect CPU cores)
+✅ Block height: 430+ (and growing)
+
+Started: 2025-11-18 15:14:47 UTC
+
+========================================
+Instructions for Bryan
+========================================
+
+1. Follow BRYAN_DEPLOYMENT_GUIDE.md step-by-step
+
+2. In your config.toml, add this bootnode:
+   
+   [network]
+   bootnodes = [
+       "/ip4/192.168.1.13/tcp/30333/p2p/12D3KooWDqN55HjCA5DBJ8DPvhrB3XPkgrRZH54DqcC5uQ94P74r"
+   ]
+
+3. Start your node and verify connection:
+   - Check logs for "Connected to peer"
+   - Both nodes should sync to same block height
+   - Genesis hashes MUST match
+
+4. Test RPC connectivity from your server:
+   curl -X POST http://192.168.1.13:9933 \
+     -H "Content-Type: application/json" \
+     -d '{"jsonrpc":"2.0","method":"chain_getBlockHeight","params":[],"id":1}'
+
+========================================
+Network Topology
+========================================
+
+Current: Single node (this one)
+Target:  Multi-node network with Bryan's server
+
+This node will act as:
+- Bootstrap/seed node for new peers
+- RPC endpoint for queries
+- Active mining participant
+- Block relay node
+
+Bryan's node will:
+- Connect via bootnode multiaddr
+- Sync full blockchain from this node
+- Participate in mining
+- Relay blocks to network

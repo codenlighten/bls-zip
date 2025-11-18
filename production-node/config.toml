@@ -1,0 +1,103 @@
+# Boundless BLS Production Node Configuration
+# First Production Node - Primary Network Seed
+# This configuration can be replicated to Bryan's server
+
+# Network Configuration
+[network]
+# Listen on all interfaces for P2P connections
+listen_addr = "/ip4/0.0.0.0/tcp/30333"
+
+# Bootstrap nodes - currently empty as this is the first node
+# Bryan's node will add this node's multiaddr here
+bootnodes = []
+
+# Consensus Configuration
+[consensus]
+# Target block time: 5 minutes (300 seconds)
+target_block_time_secs = 300
+
+# Difficulty adjustment: every 1008 blocks (~3.5 days at 5min blocks)
+difficulty_adjustment_interval = 1008
+
+# Maximum difficulty adjustment per interval (4x up or down)
+max_adjustment_factor = 4
+
+# Storage Configuration
+[storage]
+# Database path (relative to node execution directory)
+database_path = "./production-node/data/db"
+
+# Cache size: 2GB for production
+cache_size_mb = 2048
+
+# RPC Configuration
+[rpc]
+# HTTP RPC - listen on all interfaces for Bryan to connect
+http_addr = "0.0.0.0:9933"
+
+# WebSocket RPC
+ws_addr = "0.0.0.0:9944"
+
+# CORS - allow all origins for development (restrict in production)
+cors_allowed_origins = ["*"]
+
+# Mempool Configuration
+[mempool]
+# Maximum number of transactions in mempool
+max_transactions = 10000
+
+# Maximum transaction size in bytes
+max_tx_size = 100000
+
+# Minimum fee per byte
+min_fee_per_byte = 1
+
+# Mining Configuration
+[mining]
+# Mining enabled on first node
+enabled = true
+
+# Auto-detect CPU cores (0 = use all available)
+threads = 0
+
+# Coinbase address - 32 byte hex (mining rewards go here)
+# This is a placeholder address - replace with actual address from wallet
+coinbase_address = "0101010101010101010101010101010101010101010101010101010101010101"
+
+# Security Configuration
+[security]
+# TLS disabled for local network (enable for public internet)
+enable_tls = false
+
+# Maximum RPC request size: 1MB
+max_request_size_bytes = 1000000
+
+# Rate limit: 60 requests per minute per IP
+rate_limit_per_minute = 60
+
+# Authentication disabled for trusted network
+require_authentication = false
+
+# Operational Configuration
+[operational]
+# Enable Prometheus metrics
+enable_metrics = true
+
+# Metrics endpoint
+metrics_addr = "0.0.0.0:9615"
+
+# Health check endpoint enabled
+enable_health_check = true
+
+# Graceful shutdown timeout: 30 seconds
+shutdown_timeout_secs = 30
+
+# Log level: info for production
+log_level = "info"
+
+# Structured logging disabled (human-readable console logs)
+structured_logging = false
+
+# Checkpoint interval: every 1000 blocks
+# Prevents deep reorganizations and 51% attacks
+checkpoint_interval = 1000
