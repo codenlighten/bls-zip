@@ -45,7 +45,15 @@
 
 ### November 18, 2025
 
-**✅ Self-Service User Sign-Up** (Latest)
+**✅ SQL Injection Security Fix** (Latest)
+- Removed vulnerable SQL template substitution functions
+- Implemented secure parameterized queries using sqlx
+- Whitelisted report types (Transaction, Security, Application)
+- Eliminated arbitrary SQL execution capability
+- All database access now controlled and auditable
+- Production-ready security for enterprise reports
+
+**✅ Self-Service User Sign-Up**
 - Atomic account creation (identity + credentials + wallet)
 - POST /api/signup endpoint with full input validation
 - PQC wallet generation (Dilithium5) on signup
@@ -139,8 +147,8 @@
 | **HIGH** | CLI Transaction Creation | ✅ DONE | - | None |
 | **HIGH** | Contract Deployment | ✅ DONE | - | None |
 | **HIGH** | Contract ABI | ✅ DONE | - | None |
+| **MEDIUM** | SQL Injection Fix (events.rs) | ✅ DONE | - | None |
 | **HIGH** | RPC Proof Anchoring | ⏳ 0% | 1-2 days | None |
-| **MEDIUM** | SQL Injection Fix (events.rs) | ⏳ 0% | 1 day | None |
 | **MEDIUM** | E2 Template Integration | ⏳ 0% | 2-3 days | None |
 | **LOW** | WASM Compilation | ⏳ 0% | 1-2 days | None |
 | **LOW** | Bootnode Config | ⏳ 0% | 0.5 days | None |
