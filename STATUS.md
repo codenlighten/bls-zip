@@ -28,22 +28,35 @@
 
 ### ⏳ In Progress Components
 
-**Enterprise E2 Multipass Integration** (85% Complete)
+**Enterprise E2 Multipass Integration** (90% Complete)
 - ✅ Database schema & migrations
-- ✅ API endpoints (identity, wallet, auth, contracts)
+- ✅ API endpoints (identity, wallet, auth, contracts, signup)
 - ✅ Frontend UI (React + TypeScript)
+- ✅ Self-service user signup with PQC wallet generation
 - ✅ Blockchain RPC client infrastructure
 - ✅ Contract deployment with real blockchain (WASM + UTXOs)
 - ✅ CLI transaction creation with UTXOs
 - ✅ Contract ABI infrastructure (encoding/decoding)
+- ✅ Platform analytics dashboard with real-time metrics
 
 ---
 
 ## Recent Completions
 
+### November 18, 2025
+
+**✅ Self-Service User Sign-Up** (Latest)
+- Atomic account creation (identity + credentials + wallet)
+- POST /api/signup endpoint with full input validation
+- PQC wallet generation (Dilithium5) on signup
+- Auto-login with JWT token after successful registration
+- Email duplication prevention and password strength requirements
+- Complete signup page integrated with login page
+- Enables self-service onboarding without administrator intervention
+
 ### November 17, 2025
 
-**✅ Contract ABI Infrastructure** (Latest)
+**✅ Contract ABI Infrastructure**
 - Complete ABI type system (Bool, Uint, Int, Bytes, String, Address, Arrays, Tuples)
 - ABI encoder for contract method calls (910+ lines of production code)
 - ABI decoder for return values (JSON output)
@@ -229,5 +242,5 @@ eca80b9 (HEAD -> main) Implement CLI transaction creation with real UTXO support
 
 ---
 
-**Last Updated**: November 17, 2025
+**Last Updated**: November 18, 2025
 **Maintained By**: Development Team
