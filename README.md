@@ -20,6 +20,7 @@ The platform combines NIST-standardized post-quantum cryptographic algorithms wi
 
 1. **Boundless BLS Blockchain**: Core blockchain with post-quantum cryptography, SHA-3 PoW consensus, and WASM smart contracts
 2. **Enterprise E² Multipass**: Enterprise operating system providing identity management, multi-asset wallets, and business application integration
+3. **BLS Blockchain Explorer**: Modern, full-featured blockchain explorer with real-time data visualization, E² Multipass integration, and post-quantum cryptography support
 
 ### Core Values
 
@@ -71,6 +72,23 @@ The platform combines NIST-standardized post-quantum cryptographic algorithms wi
 - **Smart Contract Templates**: Pre-built templates for common business logic
 - **PostgreSQL Backend**: 20+ tables with comprehensive schema (identities, wallets, assets, events)
 - **Next.js Frontend**: Modern admin UI with TypeScript and TailwindCSS
+
+#### BLS Blockchain Explorer (100% Complete) ✅ PRODUCTION READY
+**Modern blockchain explorer with real-time data and E² Multipass integration**
+
+- **Real-Time Blockchain Visualization**: Live block and transaction monitoring with auto-refresh
+- **Block Explorer**: Detailed block information with previous/next navigation
+- **Transaction Tracker**: Multi-signature support (Classical, ML-DSA, Falcon-512, Hybrid)
+- **UTXO Visualization**: Input/output tracking with fee calculation
+- **Network Statistics Dashboard**: Interactive charts and metrics with trend indicators
+- **E² Multipass Authentication**: JWT-based login with identity management
+- **Identity Explorer**: KYC level tracking and proof anchor verification
+- **Post-Quantum Cryptography Support**: Full support for ML-DSA, Falcon-512, and hybrid signatures
+- **Advanced Features**: Wallet integration, asset transfers, sustainability metrics
+- **Next.js 14 + TypeScript**: Modern UI with shadcn/ui components and Tailwind CSS
+- **Graceful Fallback**: Mock data mode for development without blockchain node
+- **Real-Time Updates**: 30-second auto-refresh with connection health indicators
+- See [BLS_Explorer/README.md](BLS_Explorer/README.md) for complete documentation
 
 #### Compliance & Governance Modules (In Development by Boundless Trust)
 - **GeoSovereign** (70% complete): Regional data compliance automation for multi-jurisdictional operations
