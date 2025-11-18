@@ -21,6 +21,7 @@ use uuid::Uuid;
 pub mod identity;
 pub mod wallet;
 pub mod auth;
+pub mod signup;
 pub mod application;
 pub mod asset;
 pub mod events;
@@ -68,7 +69,9 @@ pub async fn serve(
     let app = Router::new()
         .merge(protected_routes)
         // FIX M-11: Pass rate limiter to auth routes for login rate limiting
-        .nest("/api/auth", auth::routes(auth_service, rate_limiter))
+        .nest("/api/auth", auth::routes(auth_service.clone(), rate_limiter))
+        // Public sign-up route (creates identity + credentials + wallet atomically)
+        .nest("/api", signup::routes(identity_service, auth_service, wallet_service))
         // Public contract routes (templates browsing)
         .nest("/api/contracts", contract::public_routes(contract_service))
         .layer(cors);

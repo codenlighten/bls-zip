@@ -149,6 +149,31 @@ class ApiClient {
     })
   }
 
+  async signup(data: {
+    full_name: string
+    email: string
+    password: string
+    phone?: string
+    country_code?: string
+  }): Promise<ApiResponse<{
+    identity: IdentityProfile
+    wallet: WalletAccount
+    session: MultipassSession
+    token: string
+  }>> {
+    const response = await this.request('/api/signup', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+
+    // Auto-login: Set token if signup successful
+    if (response.data?.token) {
+      this.setToken(response.data.token)
+    }
+
+    return response
+  }
+
   async login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
     const result = await this.request<LoginResponse>('/api/auth/login', {
       method: 'POST',
