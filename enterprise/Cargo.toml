@@ -70,7 +70,7 @@ regex = "1.10"
 jsonwebtoken = "9.2"
 
 # HTTP client (for blockchain RPC)
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.12", features = ["json"] }
 
 # gRPC (optional)
 tonic = { version = "0.11", optional = true }
