@@ -41,7 +41,11 @@ The platform combines NIST-standardized post-quantum cryptographic algorithms wi
 - **UTXO State Management**: Bitcoin-style UTXO tracking with nonce-based replay protection
 
 #### Production Infrastructure (Phase 2)
-- **JSON-RPC API**: 8 core methods for blockchain queries and transaction submission
+- **JSON-RPC 2.0 API**: 13+ methods for blockchain queries, transaction submission, and proof verification
+  - Core endpoints: `chain_getBlockHeight`, `chain_getInfo`, `chain_getBlockByHeight`, `chain_getBlockByHash`
+  - Transaction endpoints: `chain_getTransaction`, `chain_submitTransaction`, `chain_getUtxos`
+  - Proof verification: `chain_getProof`, `chain_verifyProof`, `chain_getProofsByIdentity`
+  - System endpoints: `chain_getBalance`, `system_health`, `system_version`
 - **Persistent Storage**: RocksDB with 4 column families and LZ4 compression
 - **P2P Networking**: libp2p-based networking with gossipsub and mDNS peer discovery
 - **Transaction Mempool**: Fee-based transaction ordering and management
