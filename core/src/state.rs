@@ -7,7 +7,7 @@ use crate::{
     Block, Transaction, TxOutput,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Unique identifier for a transaction output (UTXO)
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
@@ -29,6 +29,11 @@ impl OutPoint {
 pub struct BlockchainState {
     /// UTXO set: OutPoint -> TxOutput
     utxo_set: HashMap<OutPoint, TxOutput>,
+
+    /// Address index for O(1) UTXO lookup (DoS protection)
+    /// Maps recipient_pubkey_hash -> Set of OutPoints owned by that address
+    /// This prevents O(N) scans of the entire UTXO set when querying balances
+    address_index: HashMap<[u8; 32], HashSet<OutPoint>>,
 
     /// Account nonces for replay protection (pubkey_hash -> nonce)
     account_nonces: HashMap<[u8; 32], u64>,
@@ -72,6 +77,7 @@ impl BlockchainState {
     pub fn new() -> Self {
         Self {
             utxo_set: HashMap::new(),
+            address_index: HashMap::new(),
             account_nonces: HashMap::new(),
             block_height: 0,
             best_block_hash: [0u8; 32],
@@ -237,7 +243,13 @@ impl BlockchainState {
         // Add coinbase output to UTXO set
         let tx_hash = tx.hash();
         let outpoint = OutPoint::new(tx_hash, 0);
-        self.utxo_set.insert(outpoint, output.clone());
+        self.utxo_set.insert(outpoint.clone(), output.clone());
+
+        // Update address index for O(1) lookup
+        self.address_index
+            .entry(output.recipient_pubkey_hash)
+            .or_insert_with(HashSet::new)
+            .insert(outpoint);
 
         // Update total supply
         self.total_supply = self
@@ -298,6 +310,15 @@ impl BlockchainState {
                 .remove(&outpoint)
                 .ok_or_else(|| StateError::UTXONotFound(outpoint.clone()))?;
 
+            // Remove from address index for O(1) lookup
+            if let Some(outpoints) = self.address_index.get_mut(&output.recipient_pubkey_hash) {
+                outpoints.remove(&outpoint);
+                // Clean up empty sets to prevent memory bloat
+                if outpoints.is_empty() {
+                    self.address_index.remove(&output.recipient_pubkey_hash);
+                }
+            }
+
             // Track consumed UTXO for potential rollback
             block_consumed.insert(outpoint, output.clone());
 
@@ -332,7 +353,13 @@ impl BlockchainState {
                 return Err(StateError::DuplicateUTXO(outpoint));
             }
 
-            self.utxo_set.insert(outpoint, output.clone());
+            self.utxo_set.insert(outpoint.clone(), output.clone());
+
+            // Update address index for O(1) lookup
+            self.address_index
+                .entry(output.recipient_pubkey_hash)
+                .or_insert_with(HashSet::new)
+                .insert(outpoint);
 
             output_sum = output_sum
                 .checked_add(output.amount)
@@ -640,6 +667,15 @@ impl BlockchainState {
                 let outpoint = OutPoint::new(tx_hash, index as u32);
                 self.utxo_set.remove(&outpoint);
 
+                // Remove from address index
+                if let Some(outpoints) = self.address_index.get_mut(&output.recipient_pubkey_hash) {
+                    outpoints.remove(&outpoint);
+                    // Clean up empty sets
+                    if outpoints.is_empty() {
+                        self.address_index.remove(&output.recipient_pubkey_hash);
+                    }
+                }
+
                 // Subtract from total supply (coinbase only)
                 if tx_index == 0 {
                     self.total_supply = self.total_supply.saturating_sub(output.amount);
@@ -651,7 +687,13 @@ impl BlockchainState {
         if let Some(consumed) = self.consumed_utxos.remove(&block.header.height) {
             for (outpoint, output) in consumed {
                 // Restore UTXO to the set
-                self.utxo_set.insert(outpoint, output);
+                self.utxo_set.insert(outpoint.clone(), output.clone());
+
+                // Restore to address index
+                self.address_index
+                    .entry(output.recipient_pubkey_hash)
+                    .or_insert_with(HashSet::new)
+                    .insert(outpoint);
             }
         }
 
@@ -694,12 +736,18 @@ impl BlockchainState {
     }
 
     /// Get account balance (sum of all UTXOs for this pubkey hash)
+    /// O(1) lookup using address_index (DoS protection fix)
     pub fn get_balance(&self, pubkey_hash: &[u8; 32]) -> u64 {
-        self.utxo_set
-            .values()
-            .filter(|output| &output.recipient_pubkey_hash == pubkey_hash)
-            .map(|output| output.amount)
-            .sum()
+        // Use address index for O(1) lookup instead of O(N) scan
+        if let Some(outpoints) = self.address_index.get(pubkey_hash) {
+            outpoints
+                .iter()
+                .filter_map(|outpoint| self.utxo_set.get(outpoint))
+                .map(|output| output.amount)
+                .sum()
+        } else {
+            0
+        }
     }
 
     /// Get account nonce
@@ -718,12 +766,21 @@ impl BlockchainState {
     }
 
     /// Get all UTXOs for an account
+    /// O(1) lookup using address_index (DoS protection fix)
     pub fn get_utxos(&self, pubkey_hash: &[u8; 32]) -> Vec<(OutPoint, TxOutput)> {
-        self.utxo_set
-            .iter()
-            .filter(|(_, output)| &output.recipient_pubkey_hash == pubkey_hash)
-            .map(|(outpoint, output)| (outpoint.clone(), output.clone()))
-            .collect()
+        // Use address index for O(1) lookup instead of O(N) scan
+        if let Some(outpoints) = self.address_index.get(pubkey_hash) {
+            outpoints
+                .iter()
+                .filter_map(|outpoint| {
+                    self.utxo_set
+                        .get(outpoint)
+                        .map(|output| (outpoint.clone(), output.clone()))
+                })
+                .collect()
+        } else {
+            Vec::new()
+        }
     }
 
     /// Get total number of UTXOs
