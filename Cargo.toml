@@ -48,7 +48,7 @@ futures = "0.3"
 rocksdb = "0.22"
 
 # WASM Runtime
-wasmtime = "16.0"
+wasmtime = "38.0"
 
 # Logging
 tracing = "0.1"

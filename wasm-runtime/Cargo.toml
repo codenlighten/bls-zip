@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 # Wasmtime runtime
-wasmtime = { version = "16.0", features = ["cranelift", "cache", "pooling-allocator"] }
+wasmtime = { version = "38.0", features = ["cranelift", "cache", "pooling-allocator"] }
 wasmtime-wasi = "16.0"
 
 # Workspace dependencies
