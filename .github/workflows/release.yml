@@ -57,7 +57,7 @@ jobs:
           7z a ../../../../enterprise-server-${{ matrix.os }}.zip enterprise-server.exe
 
       - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             ${{ matrix.artifact_name }}.*
@@ -79,7 +79,7 @@ jobs:
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: Release v${{ steps.version.outputs.VERSION }}
           draft: false
