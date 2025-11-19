@@ -29,7 +29,26 @@ echo ""
 
 echo "⬇️  Step 3/5: Pulling pre-built Docker image from GitHub..."
 echo "   (This takes 1-2 minutes - much faster than building!)"
-docker pull ghcr.io/codenlighten/boundless-bls:latest
+
+# Check if package is public, if not, try with authentication
+if ! docker pull ghcr.io/codenlighten/boundless-bls:latest 2>/dev/null; then
+    echo "   Package is private, attempting authenticated pull..."
+    echo "   If this fails, you may need a GitHub token."
+    echo "   Set GITHUB_TOKEN environment variable or make package public."
+    
+    # Try with token if available
+    if [ -n "$GITHUB_TOKEN" ]; then
+        echo "$GITHUB_TOKEN" | docker login ghcr.io -u codenlighten --password-stdin > /dev/null 2>&1
+        docker pull ghcr.io/codenlighten/boundless-bls:latest
+        docker logout ghcr.io > /dev/null 2>&1
+    else
+        echo "   ❌ No GITHUB_TOKEN found. Either:"
+        echo "      1. Export token: export GITHUB_TOKEN='your_token_here'"
+        echo "      2. Or ask admin to make package public at:"
+        echo "         https://github.com/codenlighten?tab=packages"
+        exit 1
+    fi
+fi
 
 # Tag it locally for convenience
 docker tag ghcr.io/codenlighten/boundless-bls:latest boundless-bls:latest
