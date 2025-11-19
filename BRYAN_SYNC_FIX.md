@@ -119,3 +119,66 @@ Should show block height matching the bootstrap node (currently ~300-400).
 ---
 
 **After this, all 4 nodes will be unified on one blockchain with the same genesis!** 🎉
+
+---
+
+## Next: Generate Your Wallet
+
+Once synced, you'll want to generate a wallet to receive mining rewards and send transactions.
+
+### Generate ML-DSA Wallet
+
+**Using Docker (easiest):**
+```powershell
+# Generate wallet inside the container
+docker exec boundless-node1 boundless-cli keygen --algorithm ml-dsa --output /data/my-wallet
+
+# Copy wallet files to your host machine
+docker cp boundless-node1:/data/my-wallet.priv .\my-wallet.priv
+docker cp boundless-node1:/data/my-wallet.pub .\my-wallet.pub
+```
+
+**Output will show:**
+```
+🔑 Generating ml-dsa keypair...
+🔐 Private key saved to: /data/my-wallet.priv
+🔓 Public key saved to: /data/my-wallet.pub
+📫 Address: 915bcae53604a31fbf138ac8060f739db3c49497e181617d5eae1ced15c31638
+✅ Keypair generated successfully!
+
+⚠️  IMPORTANT: Keep your private key file secure and never share it!
+```
+
+**Save that address** - that's where you'll receive coins!
+
+### Check Your Balance
+
+```powershell
+# Inside container
+docker exec boundless-node1 curl http://localhost:3001/api/v1/balance/YOUR_ADDRESS
+
+# Or from your Windows browser
+# Open: http://localhost:3001/api/v1/balance/YOUR_ADDRESS
+```
+
+### Send a Transaction (after you have funds)
+
+```powershell
+# Copy wallet files into container if needed
+docker cp .\my-wallet.priv boundless-node1:/data/my-wallet.priv
+docker cp .\my-wallet.pub boundless-node1:/data/my-wallet.pub
+
+# Send transaction (1 BLS = 100000000 base units)
+docker exec boundless-node1 boundless-cli send RECIPIENT_ADDRESS 100000000 --key /data/my-wallet.priv
+```
+
+### Update Coinbase Address (Optional)
+
+To receive mining rewards, you need to update your node's coinbase address in the startup command:
+
+Add this environment variable when starting containers:
+```powershell
+-e COINBASE_ADDRESS="YOUR_ADDRESS_HERE"
+```
+
+Or modify the Docker run command to include your address in the config.
