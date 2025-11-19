@@ -6,13 +6,43 @@ Your 3 Docker nodes rejected a block with an ML-DSA transaction. The networks ha
 
 ## The Fix (2 Minutes Total!)
 
+### On Windows (PowerShell or WSL):
+
+**Option A - PowerShell:**
+```powershell
+cd C:\path\to\boundless-git-collab
+git pull origin main
+bash pull-docker-image.sh
+```
+
+**Option B - WSL Ubuntu:**
 ```bash
-cd /path/to/boundless-git-collab
+cd /mnt/c/path/to/boundless-git-collab
 git pull origin main
 ./pull-docker-image.sh
 ```
 
-**That's it!** The script:
+**Option C - Manual (if scripts don't work):**
+```powershell
+# Stop containers
+docker stop boundless-node1 boundless-node2 boundless-node3
+docker rm boundless-node1 boundless-node2 boundless-node3
+
+# Pull new image
+docker pull ghcr.io/codenlighten/boundless-bls:latest
+
+# Tag it locally
+docker tag ghcr.io/codenlighten/boundless-bls:latest boundless-bls:latest
+
+# Clear old data (PowerShell)
+Remove-Item -Recurse -Force .\docker-data\node1\db\*
+Remove-Item -Recurse -Force .\docker-data\node2\db\*
+Remove-Item -Recurse -Force .\docker-data\node3\db\*
+
+# Then restart containers with docker-compose or your usual method
+```
+
+**The script:
 - Stops old containers
 - Clears forked blockchain data
 - Pulls pre-built Docker image (2 mins vs 15 mins building)
@@ -53,16 +83,23 @@ Your 3 nodes will:
 
 ## Verify It Worked
 
-```bash
+**PowerShell:**
+```powershell
 # Check containers running
 docker ps
 
 # Check sync status
-docker logs boundless-node1 | grep "Received new block"
+docker logs boundless-node1 --tail 20
 
 # Check block height matches other node (~2015-2020)
-curl http://localhost:3001/api/v1/chain/info | jq .height
+docker exec boundless-node1 curl http://localhost:3001/api/v1/chain/info
 ```
+
+**Or use Docker Desktop GUI:**
+- Open Docker Desktop
+- Go to Containers tab
+- Click on boundless-node1
+- View logs and stats
 
 ## Timeline
 
