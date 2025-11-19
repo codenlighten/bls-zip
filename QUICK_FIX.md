@@ -1,12 +1,20 @@
-# 🚀 QUICK FIX: Update Your Docker Nodes (5 minutes setup)
+# 🚀 QUICK FIX: Update Your Docker Nodes
 
 ## The Problem
 
 Your Docker nodes are running old code → they rejected the ML-DSA transaction block → networks forked.
 
-## The Solution
+## The Solution (Choose One)
 
-**One command to fix everything:**
+### Option A: Pull Pre-Built Image ⚡ **FASTEST** (2 minutes)
+
+```bash
+cd /path/to/boundless-git-collab
+git pull origin main
+./pull-docker-image.sh
+```
+
+### Option B: Build Locally 🔨 (15 minutes)
 
 ```bash
 cd /path/to/boundless-git-collab
@@ -14,7 +22,7 @@ git pull origin main
 ./update-docker-nodes.sh
 ```
 
-That's it! The script does everything automatically.
+**Recommendation:** Use **Option A** if the Docker image is available on ghcr.io. Check with the team first!
 
 ---
 
