@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use boundless_core::{Signature, Transaction, TxInput, TxOutput};
-use ed25519_dalek::{Signer, SigningKey};
+use boundless_crypto::{Falcon512, MlDsa44};
 use jsonrpsee::core::client::ClientT;
 use jsonrpsee::http_client::HttpClient;
 use jsonrpsee::rpc_params;
@@ -41,23 +41,45 @@ pub async fn send_transaction(
         amount
     );
 
-    // Load private key (32-byte Ed25519 seed)
+    // Load private key (ML-DSA or Falcon)
     let priv_key_hex = fs::read_to_string(key_file)?;
     let priv_key_bytes = hex::decode(priv_key_hex.trim())?;
 
-    if priv_key_bytes.len() != 32 {
-        bail!(
-            "Invalid private key: expected 32 bytes, got {}",
-            priv_key_bytes.len()
-        );
-    }
+    // Load public key from .pub file
+    let pub_key_file = key_file.with_extension("pub");
+    let pub_key_hex = fs::read_to_string(&pub_key_file)
+        .map_err(|e| anyhow::anyhow!("Failed to read public key file {}: {}", pub_key_file.display(), e))?;
+    let public_key = hex::decode(pub_key_hex.trim())?;
 
-    let key_array: [u8; 32] = priv_key_bytes
-        .try_into()
-        .map_err(|_| anyhow::anyhow!("Failed to convert private key to array"))?;
-    let signing_key = SigningKey::from_bytes(&key_array);
-    let verifying_key = signing_key.verifying_key();
-    let public_key = verifying_key.to_bytes().to_vec();
+    // Determine key type based on private key size
+    // ML-DSA-44: 2528 bytes, Falcon-512: ~1281 bytes
+    let signature_fn: Box<dyn Fn(&[u8]) -> Result<Signature>> = 
+        if priv_key_bytes.len() == 2528 {
+            // ML-DSA-44 key
+            println!("  🔐 Using ML-DSA-44 signature");
+            
+            let secret_key = priv_key_bytes.clone();
+            Box::new(move |message: &[u8]| -> Result<Signature> {
+                let signer = MlDsa44::new()?;
+                let sig_bytes = signer.sign(message, &secret_key)?;
+                Ok(Signature::MlDsa(sig_bytes))
+            })
+        } else if priv_key_bytes.len() >= 1200 && priv_key_bytes.len() <= 1300 {
+            // Falcon-512 key (approximately 1281 bytes)
+            println!("  🔐 Using Falcon-512 signature");
+            
+            let secret_key = priv_key_bytes.clone();
+            Box::new(move |message: &[u8]| -> Result<Signature> {
+                let signer = Falcon512::new()?;
+                let sig_bytes = signer.sign(message, &secret_key)?;
+                Ok(Signature::Falcon(sig_bytes))
+            })
+        } else {
+            bail!(
+                "Invalid private key size: {} bytes. Expected ML-DSA (2528) or Falcon (~1281)",
+                priv_key_bytes.len()
+            );
+        };
 
     // Calculate sender address (SHA3-256 hash of public key)
     let mut hasher = Sha3_256::new();
@@ -179,12 +201,11 @@ pub async fn send_transaction(
     // Sign transaction
     println!("  🔐 Signing transaction...");
     let signing_hash = tx.signing_hash();
-    let signature = signing_key.sign(&signing_hash);
-    let signature_bytes = signature.to_bytes().to_vec();
+    let signature = signature_fn(&signing_hash)?;
 
     // Update all inputs with the same signature (single-sig)
     for input in &mut tx.inputs {
-        input.signature = Signature::Classical(signature_bytes.clone());
+        input.signature = signature.clone();
     }
 
     println!("  📦 Transaction created:");
@@ -203,15 +224,12 @@ pub async fn send_transaction(
         .request("chain_submitTransaction", rpc_params![tx_hex])
         .await?;
 
-    if response["success"].as_bool().unwrap_or(false) {
+    // Response format: {"tx_hash": "..."}
+    if let Some(tx_hash) = response["tx_hash"].as_str() {
         println!("  ✅ Transaction submitted successfully!");
-        println!(
-            "     TX Hash: {}",
-            response["tx_hash"].as_str().unwrap_or("unknown")
-        );
+        println!("     TX Hash: {}", tx_hash);
     } else {
-        let error_msg = response["message"].as_str().unwrap_or("Unknown error");
-        bail!("Transaction submission failed: {}", error_msg);
+        bail!("Transaction submission failed: unexpected response format");
     }
 
     Ok(())
