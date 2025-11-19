@@ -1,5 +1,36 @@
 # Windows Docker Update - Step by Step
 
+## First: Locate Your Project Folder
+
+You need to know where you cloned the `boundless-git-collab` repository.
+
+**Method 1 - File Explorer:**
+1. Open **File Explorer**
+2. Search for "boundless-git-collab" in the search box
+3. Right-click the folder → **Properties**
+4. Copy the **Location** path
+
+**Method 2 - Check Docker Volumes:**
+```powershell
+# Open PowerShell and run:
+docker inspect boundless-node1
+```
+Look for "Mounts" → "Source" - it will show something like:
+```
+"Source": "C:\\Users\\Bryan\\boundless-git-collab\\docker-data\\node1"
+```
+Your project folder is the part before `\docker-data`.
+
+**Common locations:**
+- `C:\Users\YourName\boundless-git-collab`
+- `C:\Users\YourName\Documents\boundless-git-collab`
+- `C:\Users\YourName\Desktop\boundless-git-collab`
+- `C:\boundless-git-collab`
+
+**Once you know the path**, use it in the commands below (replace `C:\path\to\boundless-git-collab`).
+
+---
+
 ## Quick Manual Update (5 minutes)
 
 Since you're using Docker Desktop on Windows, here's the easiest way:
@@ -34,17 +65,21 @@ docker tag ghcr.io/codenlighten/boundless-bls:latest boundless-bls:latest
 
 **PowerShell:**
 ```powershell
-cd C:\path\to\boundless-git-collab
+# Navigate to your project folder first
+cd C:\Users\YourName\boundless-git-collab  # Replace with your actual path
 
+# Then delete the blockchain data
 Remove-Item -Recurse -Force .\docker-data\node1\db\*
 Remove-Item -Recurse -Force .\docker-data\node2\db\*
 Remove-Item -Recurse -Force .\docker-data\node3\db\*
 ```
 
-**Or manually:**
-- Navigate to `docker-data\node1\db` folder
-- Delete all contents
-- Repeat for `node2\db` and `node3\db`
+**Or manually in File Explorer:**
+1. Navigate to your project folder
+2. Open `docker-data\node1\db` folder
+3. Select all contents (Ctrl+A)
+4. Delete (Shift+Delete for permanent)
+5. Repeat for `docker-data\node2\db` and `docker-data\node3\db`
 
 ### 4. Start New Containers
 

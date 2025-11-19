@@ -6,18 +6,34 @@ Your 3 Docker nodes rejected a block with an ML-DSA transaction. The networks ha
 
 ## The Fix (2 Minutes Total!)
 
-### On Windows (PowerShell or WSL):
+### First: Find Your Project Folder
+
+**In File Explorer:**
+1. Open File Explorer
+2. Navigate to where you cloned the repo (likely `C:\Users\YourName\Documents\` or `C:\Users\YourName\boundless-git-collab`)
+3. Click on the address bar → Copy the full path
+4. Use that path below
+
+**Or check where your containers are running:**
+```powershell
+# See where the volumes are mounted
+docker inspect boundless-node1 | Select-String "Source"
+```
+The folder above `docker-data` is your project folder.
+
+### Then: Run the Update
 
 **Option A - PowerShell:**
 ```powershell
-cd C:\path\to\boundless-git-collab
+cd C:\Users\YourName\boundless-git-collab  # Replace with your actual path
 git pull origin main
 bash pull-docker-image.sh
 ```
 
 **Option B - WSL Ubuntu:**
 ```bash
-cd /mnt/c/path/to/boundless-git-collab
+# Windows paths in WSL start with /mnt/c/
+cd /mnt/c/Users/YourName/boundless-git-collab  # Replace with your actual path
 git pull origin main
 ./pull-docker-image.sh
 ```
