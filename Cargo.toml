@@ -63,7 +63,7 @@ hex = "0.4"
 bs58 = "0.5"
 num-bigint = "0.4"
 num-traits = "0.2"
-primitive-types = "0.12"
+primitive-types = "0.14"
 
 # RPC
 jsonrpsee = { version = "0.21", features = ["server", "client"] }
